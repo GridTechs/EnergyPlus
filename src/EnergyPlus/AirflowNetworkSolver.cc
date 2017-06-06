@@ -1191,6 +1191,118 @@ namespace AirflowNetworkSolver {
 		}
 	}
 
+	int afeplr(
+		Real64 const expn, // Flow exponent
+		Real64 coef, // Flow coefficient
+		int const LFLAG, // Initialization flag.If = 1, use laminar relationship
+		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
+		int const i, // Linkage number
+		int const id0, // Node 1 number
+		int const id1, // Node 2 number
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF // Partial derivative:  DF/DP
+	)
+	{
+		// SUBROUTINE INFORMATION:
+		//       AUTHOR         George Walton
+		//       DATE WRITTEN   Extracted from AIRNET
+		//       MODIFIED       Lixing Gu, 2/1/04
+		//                      Revised the subroutine to meet E+ needs
+		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw 6/6/17
+		//       RE-ENGINEERED  na
+
+		// PURPOSE OF THIS SUBROUTINE:
+		// This subroutine solves airflow for a power law resistance airflow component
+
+		// METHODOLOGY EMPLOYED:
+		// na
+
+		// REFERENCES:
+		// na
+
+		// USE STATEMENTS:
+		// na
+
+		// Locals
+		// SUBROUTINE ARGUMENT DEFINITIONS:
+
+		// SUBROUTINE PARAMETER DEFINITIONS:
+		// na
+
+		// INTERFACE BLOCK SPECIFICATIONS
+		// na
+
+		// DERIVED TYPE DEFINITIONS
+		// na
+
+		// SUBROUTINE LOCAL VARIABLE DECLARATIONS:
+		Real64 CDM;
+		Real64 FL;
+		Real64 FT;
+		// Crack standard condition: T=20C, p=101325 Pa and 0 g/kg
+		static Real64 RhozNorm( Psychrometrics::PsyRhoAirFnPbTdbW( 101325.0, 20.0, 0.0 ) );
+		static Real64 VisczNorm( 1.71432e-5 + 4.828e-8 * 20.0 ); // Really should use a function here!
+		Real64 Ctl;
+
+		// FLOW:
+		//CompNum = DataAirflowNetwork::AirflowNetworkCompData( j ).TypeNum;
+		//expn = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowExpo;
+		//coef = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowCoef;
+
+		if (PDROP >= 0.0) {
+			coef /= SQRTDZ( id0 );
+		} else {
+			coef /= SQRTDZ( id1 );
+		}
+
+		if (LFLAG == 1) {
+			// Initialization by linear relation.
+			if (PDROP >= 0.0) {
+				Ctl = std::pow( RhozNorm / RHOZ( id0 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id0 ), 2.0 * expn - 1.0 );
+				DF[ 0 ] = coef * RHOZ( id0 ) / VISCZ( id0 ) * Ctl;
+			} else {
+				Ctl = std::pow( RhozNorm / RHOZ( id1 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id1 ), 2.0 * expn - 1.0 );
+				DF[ 0 ] = coef * RHOZ( id1 ) / VISCZ( id1 ) * Ctl;
+			}
+			F[ 0 ] = -DF[ 0 ] * PDROP;
+		} else {
+			// Standard calculation.
+			if (PDROP >= 0.0) {
+				// Flow in positive direction for laminar flow.
+				Ctl = std::pow( RhozNorm / RHOZ( id0 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id0 ), 2.0 * expn - 1.0 );
+				CDM = coef * RHOZ( id0 ) / VISCZ( id0 ) * Ctl;
+				FL = CDM * PDROP;
+				// Flow in positive direction for turbulent flow.
+				if (expn == 0.5) {
+					FT = coef * SQRTDZ( id0 ) * std::sqrt( PDROP );
+				} else {
+					FT = coef * SQRTDZ( id0 ) * std::pow( PDROP, expn );
+				}
+			} else {
+				// Flow in negative direction for laminar flow
+				Ctl = std::pow( RhozNorm / RHOZ( id1 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id1 ), 2.0 * expn - 1.0 );
+				CDM = coef * RHOZ( id1 ) / VISCZ( id1 ) * Ctl;
+				FL = CDM * PDROP;
+				// Flow in negative direction for turbulent flow
+				if (expn == 0.5) {
+					FT = -coef * SQRTDZ( id1 ) * std::sqrt( -PDROP );
+				} else {
+					FT = -coef * SQRTDZ( id1 ) * std::pow( -PDROP, expn );
+				}
+			}
+			// Select laminar or turbulent flow.
+			//if (LIST >= 4) gio::write( Unit21, Format_901 ) << " plr: " << i << PDROP << FL << FT;
+			if (std::abs( FL ) <= std::abs( FT )) {
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
+			} else {
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * expn / PDROP;
+			}
+		}
+		return 1;
+	}
+
 	void
 	AFESCR(
 		int const j, // Component number
