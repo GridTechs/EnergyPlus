@@ -1181,8 +1181,8 @@ namespace DataAirflowNetwork {
 		Real64 FLOW; // Mass flow rate [kg/s]
 		Real64 FLOW2; // Mass flow rate [kg/s] for two way flow
 		Real64 DP; // Pressure difference across a component
-		Real64 VolFLOW; // Mass flow rate [m3/s]
-		Real64 VolFLOW2; // Mass flow rate [m3/s] for two way flow
+		Real64 VolFLOW; // Volume flow rate [m3/s]
+		Real64 VolFLOW2; // Volume flow rate [m3/s] for two way flow
 		Real64 DP1;
 
 		// Default Constructor

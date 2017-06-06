@@ -47,12 +47,15 @@
 #ifndef AirflowNetworkSolver_hh_INCLUDED
 #define AirflowNetworkSolver_hh_INCLUDED
 
+#include <Eigen/Sparse>
+
 // ObjexxFCL Headers
 #include <ObjexxFCL/Array1A.hh>
 #include <ObjexxFCL/Array2D.hh>
 
 // EnergyPlus Headers
 #include <EnergyPlus.hh>
+#include "DataAirflowNetwork.hh"
 
 namespace EnergyPlus {
 
@@ -491,6 +494,32 @@ namespace AirflowNetworkSolver {
 		Real64 const Pbz, // Barometric pressure at entrance level [Pa]
 		Real64 & RhoDr // Air density of dry air on the link level used
 	);
+
+	struct Solver
+	{
+		bool allocate( Array1D< DataAirflowNetwork::AirflowNetworkLinkSimuData > &links, Array1D< DataAirflowNetwork::AirflowNetworkNodeSimuData > &nodes );
+
+		int numOfLinks{ 0 };
+		int numOfNodes{ 0 };
+
+		Eigen::VectorXd afectl;
+		Eigen::VectorXd aflow2;
+		Eigen::VectorXd aflow;
+		Eigen::VectorXd pw;
+		Eigen::VectorXd ps;
+
+		Eigen::VectorXd tz;
+		Eigen::VectorXd wz;
+		Eigen::VectorXd pz;
+		Eigen::VectorXd dz;
+		Eigen::VectorXd sqrtdz;
+		Eigen::VectorXd viscz;
+		Eigen::VectorXd sumaf;
+
+		Eigen::VectorXd ad;
+		Eigen::VectorXd au;
+		Eigen::VectorXd sumf;
+	};
 
 	//*****************************************************************************************
 
