@@ -229,7 +229,7 @@ namespace AirflowNetworkSolver {
 
 		n = 0;
 		for ( i = 1; i <= DataAirflowNetwork::AirflowNetworkNumOfLinks; ++i ) {
-			j = DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum ).CompTypeNum;
+			j = DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum ).CompTypeNum;
 			if ( j == DataAirflowNetwork::CompTypeNum_DOP ) {
 				++n;
 			}
@@ -297,7 +297,7 @@ namespace AirflowNetworkSolver {
 			}
 			gio::write( Unit11, Format_900 ) << 0;
 			for ( i = 1; i <= NetworkNumOfLinks; ++i ) {
-				gio::write( Unit11, Format_910 ) << i << DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 1 ) << DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) << DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 2 ) << DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) << DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum << 0 << 0;
+				gio::write( Unit11, Format_910 ) << i << DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 0 ] << DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] << DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 1 ] << DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] << DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum << 0 << 0;
 			}
 			gio::write( Unit11, Format_900 ) << 0;
 		}
@@ -430,10 +430,10 @@ namespace AirflowNetworkSolver {
 		}
 		// Determine column heights.
 		for ( M = 1; M <= NetworkNumOfLinks; ++M ) {
-			j = DataAirflowNetwork::AirflowNetworkLinkageData( M ).NodeNums( 2 );
+			j = DataAirflowNetwork::AirflowNetworkLinkageData( M ).nodeNums[ 1 ];
 			if ( j == 0 ) continue;
 			L = ID( j );
-			i = DataAirflowNetwork::AirflowNetworkLinkageData( M ).NodeNums( 1 );
+			i = DataAirflowNetwork::AirflowNetworkLinkageData( M ).nodeNums[ 0 ];
 			k = ID( i );
 			N1 = std::abs( L - k );
 			N2 = max( k, L );
@@ -520,14 +520,14 @@ namespace AirflowNetworkSolver {
 		}
 		// Compute stack pressures.
 		for ( i = 1; i <= NetworkNumOfLinks; ++i ) {
-			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 1 );
-			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 2 );
+			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 0 ];
+			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 1 ];
 			if ( AFLOW( i ) > 0.0 ) {
-				PS( i ) = 9.80 * ( RHOZ( n ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) * ( RHOZ( M ) - RHOZ( n ) ) );
+				PS( i ) = 9.80 * ( RHOZ( n ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] * ( RHOZ( M ) - RHOZ( n ) ) );
 			} else if ( AFLOW( i ) < 0.0 ) {
-				PS( i ) = 9.80 * ( RHOZ( M ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) * ( RHOZ( M ) - RHOZ( n ) ) );
+				PS( i ) = 9.80 * ( RHOZ( M ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] * ( RHOZ( M ) - RHOZ( n ) ) );
 			} else {
-				PS( i ) = 4.90 * ( ( RHOZ( n ) + RHOZ( M ) ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) + DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) ) * ( RHOZ( M ) - RHOZ( n ) ) );
+				PS( i ) = 4.90 * ( ( RHOZ( n ) + RHOZ( M ) ) * ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeHeight - DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeHeight ) + ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] + DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] ) * ( RHOZ( M ) - RHOZ( n ) ) );
 			}
 		}
 
@@ -542,12 +542,12 @@ namespace AirflowNetworkSolver {
 		}
 		if ( LIST >= 1 ) gio::write( Unit21, Format_900 );
 		for ( i = 1; i <= NetworkNumOfLinks; ++i ) {
-			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 1 );
-			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 2 );
+			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 0 ];
+			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 1 ];
 			if ( LIST >= 1 ) {
 				gio::write( Unit21, Format_901 ) << "Flow: " << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << AFLOW( i ) << AFLOW2( i );
 			}
-			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_HOP ) {
+			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_HOP ) {
 				SUMAF( n ) = SUMAF( n ) - AFLOW( i );
 				SUMAF( M ) += AFLOW( i );
 			} else {
@@ -570,7 +570,7 @@ namespace AirflowNetworkSolver {
 				DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW = 0.0;
 				DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW2 = -AFLOW( i );
 			}
-			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_HOP ) {
+			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_HOP ) {
 				if ( AFLOW( i ) > 0.0 ) {
 					DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW = AFLOW( i ) + AFLOW2( i );
 					DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW2 = AFLOW2( i );
@@ -585,7 +585,7 @@ namespace AirflowNetworkSolver {
 					DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW2 = AFLOW2( i );
 				}
 			}
-			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_SOP && AFLOW2( i ) != 0.0 ) {
+			if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_SOP && AFLOW2( i ) != 0.0 ) {
 				if ( AFLOW( i ) >= 0.0 ) {
 					DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW = AFLOW( i );
 					DataAirflowNetwork::AirflowNetworkLinkSimu( i ).FLOW2 = std::abs( AFLOW2( i ) );
@@ -898,8 +898,8 @@ namespace AirflowNetworkSolver {
 		}
 		//                              Set up the Jacobian matrix.
 		for ( i = 1; i <= NetworkNumOfLinks; ++i ) {
-			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 1 );
-			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 2 );
+			n = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 0 ];
+			M = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 1 ];
 			//!!! Check array of DP. DpL is used for multizone air flow calculation only
 			//!!! and is not for forced air calculation
 			if ( i > DataAirflowNetwork::NumOfLinksMultiZone ) {
@@ -908,7 +908,7 @@ namespace AirflowNetworkSolver {
 				DP = PZ( n ) - PZ( M ) + DpL( i, 1 ) + PW( i );
 			}
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << "PS:" << i << n << M << PS( i ) << PW( i ) << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP;
-			j = DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum;
+			j = DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum;
 			{ auto const SELECT_CASE_var( DataAirflowNetwork::AirflowNetworkCompData( j ).CompTypeNum );
 			if ( SELECT_CASE_var == DataAirflowNetwork::CompTypeNum_PLR ) { // Distribution system crack component
 				AFEPLR( j, LFLAG, DP, i, n, M, F, DF, NF );
@@ -973,7 +973,7 @@ namespace AirflowNetworkSolver {
 				SUMF( M ) -= F( 1 );
 				SUMAF( M ) += std::abs( F( 1 ) );
 			}
-			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums, IK, AU, AD, FLAG );
+			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 			if ( NF == 1 ) continue;
 			AFLOW2( i ) = F( 2 );
 			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRj:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F( 2 ) << DF( 2 );
@@ -992,7 +992,7 @@ namespace AirflowNetworkSolver {
 				SUMF( M ) -= F( 2 );
 				SUMAF( M ) += std::abs( F( 2 ) );
 			}
-			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums, IK, AU, AD, FLAG );
+			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 		}
 
 #ifdef SKYLINE_MATRIX_REMOVE_ZERO_COLUMNS
@@ -1894,17 +1894,17 @@ namespace AirflowNetworkSolver {
 			SumFracSuppLeak = 0.0;
 			for ( k = 1; k <= NetworkNumOfLinks; ++k ) {
 				if ( DataAirflowNetwork::AirflowNetworkLinkageData( k ).VAVTermDamper ) {
-					k1 = DataAirflowNetwork::AirflowNetworkNodeData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).NodeNums( 1 ) ).EPlusNodeNum;
+					k1 = DataAirflowNetwork::AirflowNetworkNodeData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).nodeNums[ 0 ] ).EPlusNodeNum;
 					if ( Node( k1 ).MassFlowRate > 0.0 ) {
 						SumTermFlow += Node( k1 ).MassFlowRate;
 					}
 				}
-				if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).CompNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_ELR ) {
+				if ( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).compNum ).CompTypeNum == DataAirflowNetwork::CompTypeNum_ELR ) {
 					// Calculate supply leak sensible losses
-					Node1 = DataAirflowNetwork::AirflowNetworkLinkageData( k ).NodeNums( 1 );
-					Node2 = DataAirflowNetwork::AirflowNetworkLinkageData( k ).NodeNums( 2 );
+					Node1 = DataAirflowNetwork::AirflowNetworkLinkageData( k ).nodeNums[ 0 ];
+					Node2 = DataAirflowNetwork::AirflowNetworkLinkageData( k ).nodeNums[ 1 ];
 					if ( ( DataAirflowNetwork::AirflowNetworkNodeData( Node2 ).EPlusZoneNum > 0 ) && ( DataAirflowNetwork::AirflowNetworkNodeData( Node1 ).EPlusNodeNum == 0 ) ) {
-						SumFracSuppLeak += DataAirflowNetwork::DisSysCompELRData( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).CompNum ).TypeNum ).ELR;
+						SumFracSuppLeak += DataAirflowNetwork::DisSysCompELRData( DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( k ).compNum ).TypeNum ).ELR;
 					}
 				}
 			}
@@ -2524,7 +2524,7 @@ Label90: ;
 			DF( 1 ) = 0.5 * F( 1 ) / DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
 		} else {
 			for ( k = 1; k <= NetworkNumOfLinks; ++k ) {
-				if ( DataAirflowNetwork::AirflowNetworkLinkageData( k ).NodeNums( 2 ) == n ) {
+				if ( DataAirflowNetwork::AirflowNetworkLinkageData( k ).nodeNums[ 1 ] == n ) {
 					F( 1 ) = AFLOW( k );
 					break;
 				}
@@ -3327,7 +3327,7 @@ Label90: ;
 		BuoFlow = 0.0;
 		dPBuoFlow = 0.0;
 
-		if ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) > DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) ) {
+		if ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] > DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] ) {
 			// Node N is upper zone
 			if ( RHOZ( n ) > RHOZ( M ) ) {
 				BuoFlowMax = RhozAver * 0.055 * std::sqrt( 9.81 * std::abs( RHOZ( n ) - RHOZ( M ) ) * pow_5( DH ) / RhozAver );
@@ -4044,7 +4044,7 @@ Label90: ;
 	void
 	FILSKY(
 		Array1A< Real64 > const X, // element array (row-wise sequence)
-		Array1A_int const LM, // location matrix
+		std::array< int, 2 > &LM, // location matrix
 		Array1A_int const IK, // pointer to the top of column/row "K"
 		Array1A< Real64 > AU, // the upper triangle of [A] before and after factoring
 		Array1A< Real64 > AD, // the main diagonal of [A] before and after factoring
@@ -4074,7 +4074,6 @@ Label90: ;
 
 		// Argument array dimensioning
 		X.dim( 4 );
-		LM.dim( 2 );
 		IK.dim( NetworkNumOfNodes+1 );
 		AU.dim( IK(NetworkNumOfNodes+1) );
 		AD.dim( NetworkNumOfNodes );
@@ -4101,8 +4100,8 @@ Label90: ;
 		// FLOW:
 		// K = row number, L = column number.
 		if ( FLAG > 1 ) {
-			k = LM( 1 );
-			L = LM( 2 );
+			k = LM[ 0 ];
+			L = LM[ 1 ];
 			if ( FLAG == 4 ) {
 				AD( k ) += X( 1 );
 				if ( k < L ) {
@@ -4807,13 +4806,13 @@ Label90: ;
 		Interval = ActLh * OwnHeightFactor / NrInt;
 
 		for ( n = 1; n <= NrInt; ++n ) {
-			hghtsF( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 1 ) + Interval * ( n - 0.5 );
-			hghtsT( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 2 ) + Interval * ( n - 0.5 );
+			hghtsF( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ] + Interval * ( n - 0.5 );
+			hghtsT( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ] + Interval * ( n - 0.5 );
 		}
-		hghtsF( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 1 );
-		hghtsT( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 2 );
-		hghtsF( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 1 ) + ActLh * OwnHeightFactor;
-		hghtsT( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 2 ) + ActLh * OwnHeightFactor;
+		hghtsF( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ];
+		hghtsT( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ];
+		hghtsF( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ] + ActLh * OwnHeightFactor;
+		hghtsT( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ] + ActLh * OwnHeightFactor;
 
 		lF = 1;
 		lT = 1;
@@ -4842,7 +4841,7 @@ Label90: ;
 			}
 		}
 
-		zStF( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 1 );
+		zStF( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ];
 		i = 2;
 		k = 1;
 
@@ -4858,8 +4857,8 @@ Label90: ;
 			++k;
 		}
 
-		zStF( i ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 1 ) + ActLh * OwnHeightFactor; //Autodesk:BoundsViolation zStF(i) @ i>2
-		zStT( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 2 );
+		zStF( i ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ] + ActLh * OwnHeightFactor; //Autodesk:BoundsViolation zStF(i) @ i>2
+		zStT( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ];
 		i = 2;
 		k = 1;
 
@@ -4875,7 +4874,7 @@ Label90: ;
 			++k;
 		}
 
-		zStT( i ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).NodeHeights( 2 ) + ActLh * OwnHeightFactor; //Autodesk:BoundsViolation zStT(i) @ i>2
+		zStT( i ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ] + ActLh * OwnHeightFactor; //Autodesk:BoundsViolation zStT(i) @ i>2
 
 		// Calculation of DpProf, RhoProfF, RhoProfT
 		for ( i = 1; i <= NrInt + 2; ++i ) {
@@ -5021,8 +5020,8 @@ Label90: ;
 				}
 			}
 			// Initialisation
-			From = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 1 );
-			To = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeNums( 2 );
+			From = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 0 ];
+			To = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums[ 1 ];
 			if ( DataAirflowNetwork::AirflowNetworkNodeData( From ).EPlusZoneNum > 0 && DataAirflowNetwork::AirflowNetworkNodeData( To ).EPlusZoneNum > 0 ) {
 				ll = 0;
 			} else if ( DataAirflowNetwork::AirflowNetworkNodeData( From ).EPlusZoneNum == 0 && DataAirflowNetwork::AirflowNetworkNodeData( To ).EPlusZoneNum > 0 ) {
@@ -5031,7 +5030,7 @@ Label90: ;
 				ll = 3;
 			}
 
-			Ltyp = DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).CompNum ).CompTypeNum;
+			Ltyp = DataAirflowNetwork::AirflowNetworkCompData( DataAirflowNetwork::AirflowNetworkLinkageData( i ).compNum ).CompTypeNum;
 			if ( Ltyp == DataAirflowNetwork::CompTypeNum_DOP ) {
 				ActLh = DataAirflowNetwork::MultizoneSurfaceData( i ).Height;
 				ActLOwnh = ActLh * 1.0;
@@ -5091,12 +5090,12 @@ Label90: ;
 			if ( Fromz == 0 ) ilayptr = 1;
 			j = ilayptr;
 			k = 1;
-			LClimb( G, RhoLd( 1 ), DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ), TempL1, Xhl1, DpF( k ), Toz, PzTo, Pbz, RhoDrL( i, 1 ) );
+			LClimb( G, RhoLd( 1 ), DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ], TempL1, Xhl1, DpF( k ), Toz, PzTo, Pbz, RhoDrL( i, 1 ) );
 			RhoL1 = RhoLd( 1 );
 			// For large openings calculate the stack pressure difference profile and the
 			// density profile within the the top- and the bottom- height of the large opening
 			if ( ActLOwnh > 0.0 ) {
-				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 );
+				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ];
 				RhoStF( k ) = RhoL1;
 				++k;
 				HSt( k ) = 0.0;
@@ -5107,7 +5106,7 @@ Label90: ;
 				while ( true ) {
 					ilayptr = 0;
 					if ( Fromz == 0 ) ilayptr = 9;
-					if ( ( j > ilayptr ) || ( HSt( k ) > DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) ) ) break;
+					if ( ( j > ilayptr ) || ( HSt( k ) > DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] ) ) break;
 					j += 9;
 					HSt( k ) = 0.0;
 					if ( HSt( k - 1 ) < 0.0 ) HSt( k ) = HSt( k - 1 );
@@ -5118,7 +5117,7 @@ Label90: ;
 				while ( true ) {
 					ilayptr = 0;
 					if ( Fromz == 0 ) ilayptr = 9;
-					if ( ( j > ilayptr ) || ( HSt( k ) >= ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) + ActLOwnh ) ) ) break; //Autodesk:BoundsViolation HSt(k) @ k>2
+					if ( ( j > ilayptr ) || ( HSt( k ) >= ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] + ActLOwnh ) ) ) break; //Autodesk:BoundsViolation HSt(k) @ k>2
 					T = TzFrom;
 					X = XhzFrom;
 					LClimb( G, RhoStd, HSt( k ), T, X, DpF( k ), Fromz, PzFrom, Pbz, RhoDrDummi ); //Autodesk:BoundsViolation HSt(k) and DpF(k) @ k>2
@@ -5129,7 +5128,7 @@ Label90: ;
 					if ( HSt( k - 1 ) < 0.0 ) HSt( k ) = HSt( k - 1 ); //Autodesk:BoundsViolation @ k>2
 				}
 				// Stack pressure difference and rho for top-height of the large opening
-				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) + ActLOwnh; //Autodesk:BoundsViolation k>2 poss
+				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] + ActLOwnh; //Autodesk:BoundsViolation k>2 poss
 				T = TzFrom;
 				X = XhzFrom;
 				LClimb( G, RhoStd, HSt( k ), T, X, DpF( k ), Fromz, PzFrom, Pbz, RhoDrDummi ); //Autodesk:BoundsViolation k>2 poss
@@ -5146,13 +5145,13 @@ Label90: ;
 			j = ilayptr;
 			// Calculate Rho at link height only if we have large openings or layered zones.
 			k = 1;
-			LClimb( G, RhoLd( 2 ), DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ), TempL2, Xhl2, DpT( k ), Toz, PzTo, Pbz, RhoDrL( i, 2 ) );
+			LClimb( G, RhoLd( 2 ), DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ], TempL2, Xhl2, DpT( k ), Toz, PzTo, Pbz, RhoDrL( i, 2 ) );
 			RhoL2 = RhoLd( 2 );
 
 			// For large openings calculate the stack pressure difference profile and the
 			// density profile within the the top- and the bottom- height of the large opening
 			if ( ActLOwnh > 0.0 ) {
-				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 );
+				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ];
 				RhoStT( k ) = RhoL2;
 				++k;
 				HSt( k ) = 0.0;
@@ -5160,7 +5159,7 @@ Label90: ;
 				while ( true ) {
 					ilayptr = 0;
 					if ( Toz == 0 ) ilayptr = 9;
-					if ( ( j > ilayptr ) || ( HSt( k ) > DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) ) ) break;
+					if ( ( j > ilayptr ) || ( HSt( k ) > DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] ) ) break;
 					j += 9;
 					HSt( k ) = 0.0;
 					if ( HSt( k - 1 ) < 0.0 ) HSt( k ) = HSt( k - 1 );
@@ -5170,7 +5169,7 @@ Label90: ;
 				while ( true ) {
 					ilayptr = 0;
 					if ( Toz == 0 ) ilayptr = 9;
-					if ( ( j > ilayptr ) || ( HSt( k ) >= ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) + ActLOwnh ) ) ) break; //Autodesk:BoundsViolation Hst(k) @ k>2
+					if ( ( j > ilayptr ) || ( HSt( k ) >= ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] + ActLOwnh ) ) ) break; //Autodesk:BoundsViolation Hst(k) @ k>2
 					T = TzTo;
 					X = XhzTo;
 					LClimb( G, RhoStd, HSt( k ), T, X, DpT( k ), Toz, PzTo, Pbz, RhoDrDummi ); //Autodesk:BoundsViolation HSt(k) and DpT(k) @ k>2
@@ -5181,7 +5180,7 @@ Label90: ;
 					if ( HSt( k - 1 ) < 0.0 ) HSt( k ) = HSt( k - 1 ); //Autodesk:BoundsViolation @ k>2
 				}
 				// Stack pressure difference and rho for top-height of the large opening
-				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) + ActLOwnh; //Autodesk:BoundsViolation k>2 poss
+				HSt( k ) = DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] + ActLOwnh; //Autodesk:BoundsViolation k>2 poss
 				T = TzTo;
 				X = XhzTo;
 				LClimb( G, RhoStd, HSt( k ), T, X, DpT( k ), Toz, PzTo, Pbz, RhoDrDummi ); //Autodesk:BoundsViolation k>2 poss
@@ -5193,7 +5192,7 @@ Label90: ;
 			}
 
 			// CALCULATE STACK PRESSURE FOR THE PATH ITSELF for different flow directions
-			H = double( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 2 ) ) - double( DataAirflowNetwork::AirflowNetworkLinkageData( i ).NodeHeights( 1 ) );
+			H = double( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 1 ] ) - double( DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeHeights[ 0 ] );
 			if ( ll == 0 || ll == 3 || ll == 6 ) {
 				H -= DataAirflowNetwork::AirflowNetworkNodeData( From ).NodeHeight;
 			}
@@ -5628,7 +5627,7 @@ Label90: ;
 			}
 			gio::write( Unit11, Format_900 ) << 0;
 			for ( i = 1; i <= NetworkNumOfLinks; ++i ) {
-				gio::write( Unit11, Format_910 ) << i << AirflowNetworkLinkageData( i ).NodeNums( 1 ) << AirflowNetworkLinkageData( i ).NodeHeights( 1 ) << AirflowNetworkLinkageData( i ).NodeNums( 2 ) << AirflowNetworkLinkageData( i ).NodeHeights( 2 ) << AirflowNetworkLinkageData( i ).CompNum << 0 << 0;
+				gio::write( Unit11, Format_910 ) << i << AirflowNetworkLinkageData( i ).nodeNums[ 0 ] << AirflowNetworkLinkageData( i ).NodeHeights( 1 ) << AirflowNetworkLinkageData( i ).nodeNums[ 1 ] << AirflowNetworkLinkageData( i ).NodeHeights( 2 ) << AirflowNetworkLinkageData( i ).CompNum << 0 << 0;
 			}
 			gio::write( Unit11, Format_900 ) << 0;
 		}

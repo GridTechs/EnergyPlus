@@ -427,7 +427,7 @@ namespace AirflowNetworkSolver {
 	void
 	FILSKY(
 		Array1A< Real64 > const X, // element array (row-wise sequence)
-		Array1A_int const LM, // location matrix
+		std::array< int, 2 > &LM, // location matrix
 		Array1A_int const IK, // pointer to the top of column/row "K"
 		Array1A< Real64 > AU, // the upper triangle of [A] before and after factoring
 		Array1A< Real64 > AD, // the main diagonal of [A] before and after factoring

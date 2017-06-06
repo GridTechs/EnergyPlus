@@ -563,14 +563,14 @@ namespace CrossVentMgr {
 
 		// Calculate the opening area for all apertures
 		for ( Ctd = 1; Ctd <= AirflowNetworkSurfaceUCSDCV( 0, ZoneNum ); ++Ctd ) {
-			int cCompNum = AirflowNetworkLinkageData( Ctd ).CompNum;
+			int cCompNum = AirflowNetworkLinkageData( Ctd ).compNum;
 			if ( AirflowNetworkCompData( cCompNum ).CompTypeNum == CompTypeNum_DOP ) {
 				CVJetRecFlows( Ctd, ZoneNum ).Area = SurfParametersCVDV( Ctd ).Width * SurfParametersCVDV( Ctd ).Height * MultizoneSurfaceData( Ctd ).OpenFactor;
 			} else if ( AirflowNetworkCompData( cCompNum ).CompTypeNum == CompTypeNum_SCR ) {
 				CVJetRecFlows( Ctd, ZoneNum ).Area = SurfParametersCVDV( Ctd ).Width * SurfParametersCVDV( Ctd ).Height;
 			} else {
 				ShowSevereError( "RoomAirModelCrossVent:EvolveParaUCSDCV: Illegal leakage component referenced in the cross ventilation room air model" );
-				ShowContinueError( "Surface " + AirflowNetworkLinkageData( Ctd ).Name + " in zone " + Zone( ZoneNum ).Name + " uses leakage component " + AirflowNetworkLinkageData( Ctd ).CompName );
+				ShowContinueError( "Surface " + AirflowNetworkLinkageData( Ctd ).Name + " in zone " + Zone( ZoneNum ).Name + " uses leakage component " + AirflowNetworkLinkageData( Ctd ).compName );
 				ShowContinueError( "Only leakage component types AirflowNetwork:MultiZone:Component:DetailedOpening and " );
 				ShowContinueError( "AirflowNetwork:MultiZone:Surface:Crack can be used with the cross ventilation room air model" );
 				ShowFatalError( "Previous severe error causes program termination" );
@@ -792,8 +792,8 @@ namespace CrossVentMgr {
 		} else {
 			// adiabatic surface
 			if ( MultizoneSurfaceData( MaxSurf ).SurfNum == Surface( MultizoneSurfaceData( MaxSurf ).SurfNum ).ExtBoundCond ) {
-				NodeNum1 = AirflowNetworkLinkageData( MaxSurf ).NodeNums( 1 );
-				NodeNum2 = AirflowNetworkLinkageData( MaxSurf ).NodeNums( 2 );
+				NodeNum1 = AirflowNetworkLinkageData( MaxSurf ).nodeNums[ 0 ];
+				NodeNum2 = AirflowNetworkLinkageData( MaxSurf ).nodeNums[ 1 ];
 				if ( Surface( MultizoneSurfaceData( MaxSurf ).SurfNum ).Zone == ZoneNum ) {
 					if ( AirflowNetworkNodeData( NodeNum1 ).EPlusZoneNum <= 0 ) {
 						Tin( ZoneNum ) = Surface( MultizoneSurfaceData( MaxSurf ).SurfNum ).OutDryBulbTemp;

@@ -123,8 +123,8 @@ TEST_F( EnergyPlusFixture, CrossVentMgr_EvolveParaUCSDCV_Test )
 	EnergyPlus::DataRoomAirModel::AirModel.allocate( NumOfZones );
 
 	EnergyPlus::DataAirflowNetwork::AirflowNetworkLinkageData.allocate( 2 );
-	EnergyPlus::DataAirflowNetwork::AirflowNetworkLinkageData( 1 ).CompNum = 1;
-	EnergyPlus::DataAirflowNetwork::AirflowNetworkLinkageData( 2 ).CompNum = 1;
+	EnergyPlus::DataAirflowNetwork::AirflowNetworkLinkageData( 1 ).compNum = 1;
+	EnergyPlus::DataAirflowNetwork::AirflowNetworkLinkageData( 2 ).compNum = 1;
 
 	EnergyPlus::DataAirflowNetwork::AirflowNetworkCompData.allocate( 3 );
 	EnergyPlus::DataAirflowNetwork::AirflowNetworkCompData( 1 ).TypeNum = 1;
