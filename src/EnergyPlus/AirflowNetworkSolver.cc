@@ -877,8 +877,10 @@ namespace AirflowNetworkSolver {
 #endif
 		Array1D< Real64 > X( 4 );
 		Real64 DP;
-		Array1D< Real64 > F( 2 );
-		Array1D< Real64 > DF( 2 );
+		//Array1D< Real64 > F( 2 );
+		//Array1D< Real64 > DF( 2 );
+    std::array< Real64, 2> F{ 0.0, 0.0 };
+    std::array< Real64, 2> DF{ 0.0, 0.0 };
 
 		// Formats
 		static gio::Fmt Format_901( "(A5,3I3,4E16.7)" );
@@ -952,45 +954,45 @@ namespace AirflowNetworkSolver {
 				continue;
 			}}
 			DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP = DP;
-			AFLOW( i ) = F( 1 );
+			AFLOW( i ) = F[ 0 ];
 			AFLOW2( i ) = 0.0;
 			if ( DataAirflowNetwork::AirflowNetworkCompData( j ).CompTypeNum == DataAirflowNetwork::CompTypeNum_DOP ) {
-				AFLOW2( i ) = F( 2 );
+				AFLOW2( i ) = F[ 1 ];
 			}
-			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRi:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F( 1 ) << DF( 1 );
+			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRi:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F[ 0 ] << DF[ 0 ];
 			FLAG = 1;
 			if ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeTypeNum == 0 ) {
 				++FLAG;
-				X( 1 ) = DF( 1 );
-				X( 2 ) = -DF( 1 );
-				SUMF( n ) += F( 1 );
-				SUMAF( n ) += std::abs( F( 1 ) );
+				X( 1 ) = DF[ 0 ];
+				X( 2 ) = -DF[ 0 ];
+				SUMF( n ) += F[ 0 ];
+				SUMAF( n ) += std::abs( F[ 0 ] );
 			}
 			if ( DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeTypeNum == 0 ) {
 				FLAG += 2;
-				X( 4 ) = DF( 1 );
-				X( 3 ) = -DF( 1 );
-				SUMF( M ) -= F( 1 );
-				SUMAF( M ) += std::abs( F( 1 ) );
+				X( 4 ) = DF[ 0 ];
+				X( 3 ) = -DF[ 0 ];
+				SUMF( M ) -= F[ 0 ];
+				SUMAF( M ) += std::abs( F[ 0 ] );
 			}
 			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 			if ( NF == 1 ) continue;
-			AFLOW2( i ) = F( 2 );
-			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRj:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F( 2 ) << DF( 2 );
+			AFLOW2( i ) = F[ 1 ];
+			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRj:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F[ 1 ] << DF[ 1 ];
 			FLAG = 1;
 			if ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeTypeNum == 0 ) {
 				++FLAG;
-				X( 1 ) = DF( 2 );
-				X( 2 ) = -DF( 2 );
-				SUMF( n ) += F( 2 );
-				SUMAF( n ) += std::abs( F( 2 ) );
+				X( 1 ) = DF[ 1 ];
+				X( 2 ) = -DF[ 1 ];
+				SUMF( n ) += F[ 1 ];
+				SUMAF( n ) += std::abs( F[ 1 ] );
 			}
 			if ( DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeTypeNum == 0 ) {
 				FLAG += 2;
-				X( 4 ) = DF( 2 );
-				X( 3 ) = -DF( 2 );
-				SUMF( M ) -= F( 2 );
-				SUMAF( M ) += std::abs( F( 2 ) );
+				X( 4 ) = DF[ 1 ];
+				X( 3 ) = -DF[ 1 ];
+				SUMF( M ) -= F[ 1 ];
+				SUMAF( M ) += std::abs( F[ 1 ] );
 			}
 			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 		}
@@ -1075,8 +1077,8 @@ namespace AirflowNetworkSolver {
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+    std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+    std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1099,10 +1101,6 @@ namespace AirflowNetworkSolver {
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -1149,12 +1147,12 @@ namespace AirflowNetworkSolver {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
 				Ctl = std::pow( RhozNorm / RHOZ( n ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( n ), 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 			} else {
 				Ctl = std::pow( RhozNorm / RHOZ( M ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( M ), 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -1182,18 +1180,18 @@ namespace AirflowNetworkSolver {
 			// Select laminar or turbulent flow.
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " plr: " << i << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = FT * expn / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * expn / PDROP;
 			}
 		}
 	}
 
 	int afeplr(
-		Real64 const expn, // Flow exponent
 		Real64 coef, // Flow coefficient
+		Real64 const expn, // Flow exponent
 		int const LFLAG, // Initialization flag.If = 1, use laminar relationship
 		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
 		int const i, // Linkage number
@@ -1243,11 +1241,6 @@ namespace AirflowNetworkSolver {
 		static Real64 RhozNorm( Psychrometrics::PsyRhoAirFnPbTdbW( 101325.0, 20.0, 0.0 ) );
 		static Real64 VisczNorm( 1.71432e-5 + 4.828e-8 * 20.0 ); // Really should use a function here!
 		Real64 Ctl;
-
-		// FLOW:
-		//CompNum = DataAirflowNetwork::AirflowNetworkCompData( j ).TypeNum;
-		//expn = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowExpo;
-		//coef = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowCoef;
 
 		if (PDROP >= 0.0) {
 			coef /= SQRTDZ( id0 );
@@ -1311,8 +1304,8 @@ namespace AirflowNetworkSolver {
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1335,10 +1328,6 @@ namespace AirflowNetworkSolver {
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -1396,13 +1385,13 @@ namespace AirflowNetworkSolver {
 			if ( PDROP >= 0.0 ) {
 				RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 				Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 			} else {
 				RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 				Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -1435,11 +1424,123 @@ namespace AirflowNetworkSolver {
 			// Select laminar or turbulent flow.
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " scr: " << i << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = FT * expn / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * expn / PDROP;
+			}
+		}
+	}
+
+	void Solver::afescr( Real64 coef, // Flow coefficient
+		Real64 const expn, // Flow exponent
+		Real64 const refDensity, // Reference density
+		Real64 const refViscosity, // Reference viscosity
+		int const LFLAG, // Initialization flag. If = 1, use laminar relationship
+		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
+		int const id0, // Node 1 number
+		int const id1, // Node 2 number
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF // Partial derivative:  DF/DP
+	)
+	{
+		// SUBROUTINE INFORMATION:
+		//       AUTHOR         George Walton
+		//       DATE WRITTEN   Extracted from AIRNET
+		//       MODIFIED       Lixing Gu, 2/1/04
+		//                      Revised the subroutine to meet E+ needs
+		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw, 6/6/17
+		//       RE-ENGINEERED  na
+
+		// PURPOSE OF THIS SUBROUTINE:
+		// This subroutine solves airflow for a surface crack component
+
+		// METHODOLOGY EMPLOYED:
+		// na
+
+		// REFERENCES:
+		// na
+
+		// USE STATEMENTS:
+		// na
+
+		// Locals
+		// SUBROUTINE ARGUMENT DEFINITIONS:
+
+		// SUBROUTINE PARAMETER DEFINITIONS:
+		// na
+
+		// INTERFACE BLOCK SPECIFICATIONS
+		// na
+
+		// DERIVED TYPE DEFINITIONS
+		// na
+
+		// SUBROUTINE LOCAL VARIABLE DECLARATIONS:
+		Real64 CDM;
+		Real64 FL;
+		Real64 FT;
+		Real64 Ctl;
+		Real64 VisAve;
+		Real64 Tave;
+		Real64 RhoCor;
+
+		VisAve = (viscz( id0 ) + viscz( id1 )) / 2.0;
+		Tave = (tz( id0 ) + tz( id1 )) / 2.0;
+		if (PDROP >= 0.0) {
+			coef /= sqrtdz( id0 );
+		} else {
+			coef /= sqrtdz( id1 );
+		}
+
+		if (LFLAG == 1) {
+			// Initialization by linear relation.
+			if (PDROP >= 0.0) {
+				RhoCor = (TZ( id0 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
+				Ctl = std::pow( refDensity / dz( id0 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
+				DF[0] = coef * dz( id0 ) / viscz( id0 ) * Ctl;
+			} else {
+				RhoCor = (TZ( id1 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
+				Ctl = std::pow( refDensity / dz( id1 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
+				DF[0] = coef * dz( id1 ) / viscz( id1 ) * Ctl;
+			}
+			F[0] = -DF[0] * PDROP;
+		} else {
+			// Standard calculation.
+			if (PDROP >= 0.0) {
+				// Flow in positive direction.
+				// Laminar flow.
+				RhoCor = (tz( id0 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
+				Ctl = std::pow( refDensity / dz( id0 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
+				CDM = coef * dz( id0 ) / viscz( id0 ) * Ctl;
+				FL = CDM * PDROP;
+				// Turbulent flow.
+				if (expn == 0.5) {
+					FT = coef * sqrtdz( id0 ) * std::sqrt( PDROP ) * Ctl;
+				} else {
+					FT = coef * sqrtdz( id0 ) * std::pow( PDROP, expn ) * Ctl;
+				}
+			} else {
+				// Flow in negative direction for laminar flow
+				RhoCor = (tz( id1 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
+				Ctl = std::pow( refDensity / dz( id1 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
+				CDM = coef * dz( id1 ) / viscz( id1 ) * Ctl;
+				FL = CDM * PDROP;
+				// Flow in negative direction for turbulent flow
+				if (expn == 0.5) {
+					FT = -coef * sqrtdz( id1 ) * std::sqrt( -PDROP ) * Ctl;
+				} else {
+					FT = -coef * sqrtdz( id1 ) * std::pow( -PDROP, expn ) * Ctl;
+				}
+			}
+			// Select laminar or turbulent flow.
+			if (std::abs( FL ) <= std::abs( FT )) {
+				F[0] = FL;
+				DF[0] = CDM;
+			} else {
+				F[0] = FT;
+				DF[0] = FT * expn / PDROP;
 			}
 		}
 	}
@@ -1452,8 +1553,8 @@ namespace AirflowNetworkSolver {
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1478,10 +1579,6 @@ namespace AirflowNetworkSolver {
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -1532,12 +1629,12 @@ namespace AirflowNetworkSolver {
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = ( 2.0 * RHOZ( n ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).A * DataAirflowNetwork::DisSysCompDuctData( CompNum ).D ) / ( VISCZ( n ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( n ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).A * DataAirflowNetwork::DisSysCompDuctData( CompNum ).D ) / ( VISCZ( n ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef * ld );
 			} else {
-				DF( 1 ) = ( 2.0 * RHOZ( M ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).A * DataAirflowNetwork::DisSysCompDuctData( CompNum ).D ) / ( VISCZ( M ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( M ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).A * DataAirflowNetwork::DisSysCompDuctData( CompNum ).D ) / ( VISCZ( M ) * DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef * ld );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
-			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef << F( 1 ) << DF( 1 );
+			F[ 0 ] = -DF[ 0 ] * PDROP;
+			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << DataAirflowNetwork::DisSysCompDuctData( CompNum ).InitLamCoef << F[ 0 ] << DF[ 0 ];
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -1611,11 +1708,11 @@ namespace AirflowNetworkSolver {
 			}
 			// Select laminar or turbulent flow.
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = 0.5 * FT / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = 0.5 * FT / PDROP;
 			}
 		}
 
@@ -1629,8 +1726,8 @@ namespace AirflowNetworkSolver {
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1655,10 +1752,6 @@ namespace AirflowNetworkSolver {
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -1745,7 +1838,7 @@ namespace AirflowNetworkSolver {
 			DPMID = PDROP - 0.5 * Height * GDRHO;
 			// Initialization or identical temps: treat as one-way flow.
 			GenericCrack( FlowCoef, FlowExpo, LFLAG, DPMID, n, M, F, DF, NF );
-			if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Drs:" << DPMID << F( 1 ) << DF( 1 );
+			if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Drs:" << DPMID << F[ 0 ] << DF[ 0 ];
 		} else {
 			// Possible two-way flow:
 			Y = PDROP / GDRHO;
@@ -1762,39 +1855,39 @@ namespace AirflowNetworkSolver {
 			if ( Y <= 0.0 ) {
 				// One-way flow (negative).
 				if ( DRHO >= 0.0 ) {
-					F( 1 ) = -SQRTDZ( M ) * std::abs( FH - F0 );
-					DF( 1 ) = SQRTDZ( M ) * std::abs( DFH - DF0 );
+					F[ 0 ] = -SQRTDZ( M ) * std::abs( FH - F0 );
+					DF[ 0 ] = SQRTDZ( M ) * std::abs( DFH - DF0 );
 				} else {
-					F( 1 ) = SQRTDZ( n ) * std::abs( FH - F0 );
-					DF( 1 ) = SQRTDZ( n ) * std::abs( DFH - DF0 );
+					F[ 0 ] = SQRTDZ( n ) * std::abs( FH - F0 );
+					DF[ 0 ] = SQRTDZ( n ) * std::abs( DFH - DF0 );
 				}
-				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr1:" << C << F( 1 ) << DF( 1 );
+				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr1:" << C << F[ 0 ] << DF[ 0 ];
 			} else if ( Y >= Height ) {
 				// One-way flow (positive).
 				if ( DRHO >= 0.0 ) {
-					F( 1 ) = SQRTDZ( n ) * std::abs( FH - F0 );
-					DF( 1 ) = SQRTDZ( n ) * std::abs( DFH - DF0 );
+					F[ 0 ] = SQRTDZ( n ) * std::abs( FH - F0 );
+					DF[ 0 ] = SQRTDZ( n ) * std::abs( DFH - DF0 );
 				} else {
-					F( 1 ) = -SQRTDZ( M ) * std::abs( FH - F0 );
-					DF( 1 ) = SQRTDZ( M ) * std::abs( DFH - DF0 );
+					F[ 0 ] = -SQRTDZ( M ) * std::abs( FH - F0 );
+					DF[ 0 ] = SQRTDZ( M ) * std::abs( DFH - DF0 );
 				}
-				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr2:" << C << F( 1 ) << DF( 1 );
+				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr2:" << C << F[ 0 ] << DF[ 0 ];
 			} else {
 				// Two-way flow.
 				NF = 2;
 				if ( DRHO >= 0.0 ) {
-					F( 1 ) = -SQRTDZ( M ) * FH;
-					DF( 1 ) = SQRTDZ( M ) * DFH;
-					F( 2 ) = SQRTDZ( n ) * F0;
-					DF( 2 ) = SQRTDZ( n ) * DF0;
+					F[ 0 ] = -SQRTDZ( M ) * FH;
+					DF[ 0 ] = SQRTDZ( M ) * DFH;
+					F[ 1 ] = SQRTDZ( n ) * F0;
+					DF[ 1 ] = SQRTDZ( n ) * DF0;
 				} else {
-					F( 1 ) = SQRTDZ( n ) * FH;
-					DF( 1 ) = SQRTDZ( n ) * DFH;
-					F( 2 ) = -SQRTDZ( M ) * F0;
-					DF( 2 ) = SQRTDZ( M ) * DF0;
+					F[ 0 ] = SQRTDZ( n ) * FH;
+					DF[ 0 ] = SQRTDZ( n ) * DFH;
+					F[ 1 ] = -SQRTDZ( M ) * F0;
+					DF[ 1 ] = SQRTDZ( M ) * DF0;
 				}
-				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr3:" << C << F( 1 ) << DF( 1 );
-				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr4:" << C << F( 2 ) << DF( 2 );
+				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr3:" << C << F[ 0 ] << DF[ 0 ];
+				if ( LIST >= 4 ) gio::write( Unit21, Format_900 ) << " Dr4:" << C << F[ 1 ] << DF[ 1 ];
 			}
 		}
 
@@ -1808,8 +1901,8 @@ namespace AirflowNetworkSolver {
 		int const EP_UNUSED( i ), // Linkage number
 		int const EP_UNUSED( n ), // Node 1 number
 		int const EP_UNUSED( M ), // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1841,10 +1934,6 @@ namespace AirflowNetworkSolver {
 		using DataHVACGlobals::FanType_SimpleConstVolume;
 		using DataHVACGlobals::FanType_SimpleVAV;
 
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
-
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
 
@@ -1872,21 +1961,21 @@ namespace AirflowNetworkSolver {
 		NF = 1;
 		if ( DataAirflowNetwork::DisSysCompCVFData( CompNum ).FanTypeNum == FanType_SimpleOnOff ) {
 			if ( LoopFanOperationMode == CycFanCycComp && LoopSystemOnMassFlowrate > 0.0 ) {
-				F( 1 ) = LoopSystemOnMassFlowrate;
+				F[ 0 ] = LoopSystemOnMassFlowrate;
 			} else {
-				F( 1 ) = Node( DataAirflowNetwork::DisSysCompCVFData( CompNum ).InletNode ).MassFlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
+				F[ 0 ] = Node( DataAirflowNetwork::DisSysCompCVFData( CompNum ).InletNode ).MassFlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
 				if ( DataAirflowNetwork::MultiSpeedHPIndicator == 2 ) {
-					F( 1 ) = LoopSystemOnMassFlowrate * LoopCompCycRatio + LoopSystemOffMassFlowrate * ( 1.0 - LoopCompCycRatio );
+					F[ 0 ] = LoopSystemOnMassFlowrate * LoopCompCycRatio + LoopSystemOffMassFlowrate * ( 1.0 - LoopCompCycRatio );
 				}
 			}
 		} else if (DataAirflowNetwork::DisSysCompCVFData( CompNum ).FanTypeNum == FanType_SimpleConstVolume ) {
 			if (DataAirflowNetwork::DisSysCompCVFData( CompNum ).FlowRate > 0 ) {
-				F( 1 ) = DataAirflowNetwork::DisSysCompCVFData( CompNum ).FlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
+				F[ 0 ] = DataAirflowNetwork::DisSysCompCVFData( CompNum ).FlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
 			} else {
-				F( 1 ) = Node( DataAirflowNetwork::DisSysCompCVFData( CompNum ).InletNode ).MassFlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
+				F[ 0 ] = Node( DataAirflowNetwork::DisSysCompCVFData( CompNum ).InletNode ).MassFlowRate * DataAirflowNetwork::DisSysCompCVFData( CompNum ).Ctrl;
 			}
 			if ( DataAirflowNetwork::MultiSpeedHPIndicator == 2 ) {
-				F( 1 ) = LoopSystemOnMassFlowrate;
+				F[ 0 ] = LoopSystemOnMassFlowrate;
 			}
 		} else if ( DataAirflowNetwork::DisSysCompCVFData( CompNum ).FanTypeNum == FanType_SimpleVAV ) {
 			// Check VAV termals with a damper
@@ -1908,14 +1997,14 @@ namespace AirflowNetworkSolver {
 					}
 				}
 			}
-			F( 1 ) = SumTermFlow / ( 1.0 - SumFracSuppLeak );
+			F[ 0 ] = SumTermFlow / ( 1.0 - SumFracSuppLeak );
 			DataAirflowNetwork::VAVTerminalRatio = 0.0;
-			if ( F( 1 ) > DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate ) {
-				DataAirflowNetwork::VAVTerminalRatio = DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate / F( 1 );
-				F( 1 ) = DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate;
+			if ( F[ 0 ] > DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate ) {
+				DataAirflowNetwork::VAVTerminalRatio = DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate / F[ 0 ];
+				F[ 0 ] = DataAirflowNetwork::DisSysCompCVFData( CompNum ).MaxAirMassFlowRate;
 			}
 		}
-		DF( 1 ) = 0.0;
+		DF[ 0 ] = 0.0;
 
 	}
 
@@ -1927,8 +2016,8 @@ namespace AirflowNetworkSolver {
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -1952,10 +2041,6 @@ namespace AirflowNetworkSolver {
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2012,7 +2097,7 @@ namespace AirflowNetworkSolver {
 		if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " fan:" << i << PDROP << PRISE << AFECTL( i ) << DataAirflowNetwork::DisSysCompDetFanData( CompNum ).TranRat;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear approximation.
-			F( 1 ) = -DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Qfree * AFECTL( i ) * ( 1.0 - PRISE / DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Pshut );
+			F[ 0 ] = -DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Qfree * AFECTL( i ) * ( 1.0 - PRISE / DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Pshut );
 			DPDF = -DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Pshut / DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Qfree;
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " fni:" << JA << DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Qfree << DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Pshut;
 		} else {
@@ -2062,16 +2147,16 @@ Label70: ;
 Label80: ;
 			CX = 0.5 * ( BX + DX );
 Label90: ;
-			F( 1 ) = CX;
+			F[ 0 ] = CX;
 			DPDF = DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Coeff( k + 2 ) + CX * ( 2.0 * DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Coeff( k + 3 ) + CX * 3.0 * DataAirflowNetwork::DisSysCompDetFanData( CompNum ).Coeff( k + 4 ) );
 		}
 		// Convert to flow at given speed.
-		F( 1 ) *= ( RHOZ( n ) / DataAirflowNetwork::DisSysCompDetFanData( CompNum ).RhoAir ) * AFECTL( i );
+		F[ 0 ] *= ( RHOZ( n ) / DataAirflowNetwork::DisSysCompDetFanData( CompNum ).RhoAir ) * AFECTL( i );
 		// Set derivative w/r pressure drop (-).
 		if ( AFECTL( i ) >= DataAirflowNetwork::DisSysCompDetFanData( CompNum ).TranRat ) {
-			DF( 1 ) = -AFECTL( i ) / DPDF;
+			DF[ 0 ] = -AFECTL( i ) / DPDF;
 		} else {
-			DF( 1 ) = -1.0 / DPDF;
+			DF[ 0 ] = -1.0 / DPDF;
 		}
 	}
 
@@ -2085,8 +2170,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const EP_UNUSED( n ), // Node 1 number
 		int const EP_UNUSED( M ), // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2111,10 +2196,6 @@ Label90: ;
 		// USE STATEMENTS:
 		// na
 
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
-
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
 
@@ -2133,11 +2214,11 @@ Label90: ;
 		// FLOW:
 		NF = 1;
 		if ( LFLAG == 1 ) {
-			F( 1 ) = AFECTL( i );
-			DF( 1 ) = F( 1 );
+			F[ 0 ] = AFECTL( i );
+			DF[ 0 ] = F[ 0 ];
 		} else {
-			F( 1 ) = -AFECTL( i ) / PDROP;
-			DF( 1 ) = -F( 1 ) / PDROP;
+			F[ 0 ] = -AFECTL( i ) / PDROP;
+			DF[ 0 ] = -F[ 0 ] / PDROP;
 		}
 
 	}
@@ -2152,8 +2233,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2177,10 +2258,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2214,19 +2291,19 @@ Label90: ;
 		if ( LFLAG == 1 || std::abs( PDROP ) <= DataAirflowNetwork::DisSysCompDamperData( CompNum ).LTP ) {
 			//                              Laminar flow.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).LamFlow * RHOZ( n ) / VISCZ( n );
+				DF[ 0 ] = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).LamFlow * RHOZ( n ) / VISCZ( n );
 			} else {
-				DF( 1 ) = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).LamFlow * RHOZ( M ) / VISCZ( M );
+				DF[ 0 ] = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).LamFlow * RHOZ( M ) / VISCZ( M );
 			}
-			F( 1 ) = DF( 1 ) * PDROP;
+			F[ 0 ] = DF[ 0 ] * PDROP;
 		} else {
 			//                              Turbulent flow.
 			if ( PDROP >= 0.0 ) {
-				F( 1 ) = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).TurFlow * SQRTDZ( n ) * std::pow( PDROP, DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo );
+				F[ 0 ] = C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).TurFlow * SQRTDZ( n ) * std::pow( PDROP, DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo );
 			} else {
-				F( 1 ) = -C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).TurFlow * SQRTDZ( M ) * std::pow( -PDROP, DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo );
+				F[ 0 ] = -C * DataAirflowNetwork::DisSysCompDamperData( CompNum ).TurFlow * SQRTDZ( M ) * std::pow( -PDROP, DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo );
 			}
-			DF( 1 ) = F( 1 ) *DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo / PDROP;
+			DF[ 0 ] = F[ 0 ] *DataAirflowNetwork::DisSysCompDamperData( CompNum ).FlowExpo / PDROP;
 		}
 
 	}
@@ -2239,8 +2316,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2264,10 +2341,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2302,11 +2375,11 @@ Label90: ;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = FlowCoef * RHOZ( n ) / VISCZ( n );
+				DF[ 0 ] = FlowCoef * RHOZ( n ) / VISCZ( n );
 			} else {
-				DF( 1 ) = FlowCoef * RHOZ( M ) / VISCZ( M );
+				DF[ 0 ] = FlowCoef * RHOZ( M ) / VISCZ( M );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -2335,11 +2408,11 @@ Label90: ;
 			// Select laminar or turbulent flow.
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " plr: " << i << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ]= CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = FT * FlowExpo / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * FlowExpo / PDROP;
 			}
 		}
 
@@ -2353,8 +2426,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2378,10 +2451,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2414,11 +2483,11 @@ Label90: ;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = FlowCoef * RHOZ( n ) / VISCZ( n );
+				DF[ 0 ] = FlowCoef * RHOZ( n ) / VISCZ( n );
 			} else {
-				DF( 1 ) = FlowCoef * RHOZ( M ) / VISCZ( M );
+				DF[ 0 ] = FlowCoef * RHOZ( M ) / VISCZ( M );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -2447,11 +2516,11 @@ Label90: ;
 			// Select laminar or turbulent flow.
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " plr: " << i << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = FT * DataAirflowNetwork::DisSysCompELRData( CompNum ).FlowExpo / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * DataAirflowNetwork::DisSysCompELRData( CompNum ).FlowExpo / PDROP;
 			}
 		}
 
@@ -2465,8 +2534,8 @@ Label90: ;
 		int const EP_UNUSED( i ), // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2490,10 +2559,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2520,19 +2585,19 @@ Label90: ;
 
 		NF = 1;
 		if ( PDROP == 0.0 ) {
-			F( 1 ) = std::sqrt( 2.0 * RHOZ( n ) ) * DataAirflowNetwork::DisSysCompCPDData( CompNum ).A * std::sqrt( DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP );
-			DF( 1 ) = 0.5 * F( 1 ) / DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
+			F[ 0 ] = std::sqrt( 2.0 * RHOZ( n ) ) * DataAirflowNetwork::DisSysCompCPDData( CompNum ).A * std::sqrt( DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP );
+			DF[ 0 ] = 0.5 * F[ 0 ] / DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
 		} else {
 			for ( k = 1; k <= NetworkNumOfLinks; ++k ) {
 				if ( DataAirflowNetwork::AirflowNetworkLinkageData( k ).nodeNums[ 1 ] == n ) {
-					F( 1 ) = AFLOW( k );
+					F[ 0 ] = AFLOW( k );
 					break;
 				}
 			}
 			PDROP = DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
 			PZ( M ) = PZ( n ) - PDROP;
-			Co = F( 1 ) / DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
-			DF( 1 ) = 10.e10;
+			Co = F[ 0 ] / DataAirflowNetwork::DisSysCompCPDData( CompNum ).DP;
+			DF[ 0 ] = 10.e10;
 		}
 
 	}
@@ -2545,8 +2610,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2570,10 +2635,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2628,12 +2689,12 @@ Label90: ;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompCoilData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompCoilData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
 			} else {
-				DF( 1 ) = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompCoilData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompCoilData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
-			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << InitLamCoef << F( 1 ) << DF( 1 );
+			F[ 0 ] = -DF[ 0 ] * PDROP;
+			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << InitLamCoef << F[ 0 ] << DF[ 0 ];
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -2707,11 +2768,11 @@ Label90: ;
 			}
 			// Select laminar or turbulent flow.
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = 0.5 * FT / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = 0.5 * FT / PDROP;
 			}
 		}
 
@@ -2725,8 +2786,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2750,10 +2811,6 @@ Label90: ;
 
 		// Using/Aliasing
 		using DataLoopNode::Node;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2808,12 +2865,12 @@ Label90: ;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
 			} else {
-				DF( 1 ) = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
-			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << InitLamCoef << F( 1 ) << DF( 1 );
+			F[ 0 ] = -DF[ 0 ] * PDROP;
+			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " dwi:" << i << InitLamCoef << F[ 0 ] << DF[ 0 ];
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -2887,20 +2944,20 @@ Label90: ;
 			}
 			// Select laminar or turbulent flow.
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = 0.5 * FT / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = 0.5 * FT / PDROP;
 			}
 		}
 		// If damper, setup the airflows from nodal values calculated from terminal
 		if ( DataAirflowNetwork::AirflowNetworkLinkageData( i ).VAVTermDamper ) {
-			F( 1 ) = Node( DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).DamperInletNode ).MassFlowRate;
+			F[ 0 ] = Node( DataAirflowNetwork::DisSysCompTermUnitData( CompNum ).DamperInletNode ).MassFlowRate;
 			if ( DataAirflowNetwork::VAVTerminalRatio > 0.0 ) {
-				F( 1 ) *= DataAirflowNetwork::VAVTerminalRatio;
+				F[ 0 ] *= DataAirflowNetwork::VAVTerminalRatio;
 			}
-			DF( 1 ) = 0.0;
+			DF[ 0 ] = 0.0;
 		}
 
 	}
@@ -2913,8 +2970,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -2937,10 +2994,6 @@ Label90: ;
 		// Using/Aliasing
 		using DataLoopNode::Node;
 		using DataHVACGlobals::VerySmallMassFlow;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -2980,11 +3033,11 @@ Label90: ;
 			// Treat the component as an exhaust fan
 			NF = 1;
 			if ( DataAirflowNetwork::PressureSetFlag == DataAirflowNetwork::PressureCtrlExhaust ) {
-				F( 1 ) = DataAirflowNetwork::ExhaustFanMassFlowRate;
+				F[ 0 ] = DataAirflowNetwork::ExhaustFanMassFlowRate;
 			} else {
-				F( 1 ) = Node( InletNode ).MassFlowRate;
+				F[ 0 ] = Node( InletNode ).MassFlowRate;
 			}
-			DF( 1 ) = 0.0;
+			DF[ 0 ] = 0.0;
 			return;
 		} else {
 			// Treat the component as a surface crack
@@ -3008,13 +3061,13 @@ Label90: ;
 				if ( PDROP >= 0.0 ) {
 					RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 				} else {
 					RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 				}
-				F( 1 ) = -DF( 1 ) * PDROP;
+				F[ 0 ] = -DF[ 0 ] * PDROP;
 			} else {
 				// Standard calculation.
 				if ( PDROP >= 0.0 ) {
@@ -3047,11 +3100,11 @@ Label90: ;
 				// Select laminar or turbulent flow.
 				if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " scr: " << i << PDROP << FL << FT;
 				if ( std::abs( FL ) <= std::abs( FT ) ) {
-					F( 1 ) = FL;
-					DF( 1 ) = CDM;
+					F[ 0 ] = FL;
+					DF[ 0 ] = CDM;
 				} else {
-					F( 1 ) = FT;
-					DF( 1 ) = FT * expn / PDROP;
+					F[ 0 ] = FT;
+					DF[ 0 ] = FT * expn / PDROP;
 				}
 			}
 		}
@@ -3065,8 +3118,8 @@ Label90: ;
 		int const EP_UNUSED( i ), // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -3090,10 +3143,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -3145,11 +3194,11 @@ Label90: ;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
 			if ( PDROP >= 0.0 ) {
-				DF( 1 ) = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompHXData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( n ) * area * DataAirflowNetwork::DisSysCompHXData( CompNum ).D ) / ( VISCZ( n ) * InitLamCoef * ld );
 			} else {
-				DF( 1 ) = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompHXData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
+				DF[ 0 ] = ( 2.0 * RHOZ( M ) * area * DataAirflowNetwork::DisSysCompHXData( CompNum ).D ) / ( VISCZ( M ) * InitLamCoef * ld );
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -3217,11 +3266,11 @@ Label90: ;
 			}
 			// Select laminar or turbulent flow.
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = 0.5 * FT / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = 0.5 * FT / PDROP;
 			}
 		}
 
@@ -3235,8 +3284,8 @@ Label90: ;
 		int const i, // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -3260,10 +3309,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		using DataGlobals::Pi;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -3370,13 +3415,13 @@ Label90: ;
 			}
 		}
 
-		F( 1 ) = fma12 - fma21;
-		DF( 1 ) = dp1fma12 - dp1fma21;
-		F( 2 ) = 0.0;
+		F[ 0 ] = fma12 - fma21;
+		DF[ 0 ] = dp1fma12 - dp1fma21;
+		F[ 1 ] = 0.0;
 		if ( fma12 != 0.0 && fma21 != 0.0 ) {
-			F( 2 ) = BuoFlow;
+			F[ 1 ] = BuoFlow;
 		}
-		DF( 2 ) = 0.0;
+		DF[ 1 ] = 0.0;
 
 	}
 
@@ -3388,8 +3433,8 @@ Label90: ;
 		int const EP_UNUSED( i ), // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -3406,10 +3451,6 @@ Label90: ;
 		using DataAirLoop::LoopFanOperationMode;
 		using DataAirLoop::LoopOnOffFanPartLoadRatio;
 		using DataHVACGlobals::FanType_SimpleOnOff;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -3446,10 +3487,10 @@ Label90: ;
 		if ( Node( InletNode ).MassFlowRate > VerySmallMassFlow ) {
 			// Treat the component as an exhaust fan
 			NF = 1;
-			F( 1 ) = Node( InletNode ).MassFlowRate;
-			DF( 1 ) = 0.0;
+			F[ 0 ] = Node( InletNode ).MassFlowRate;
+			DF[ 0 ] = 0.0;
 			if ( LoopFanOperationMode == CycFanCycComp && LoopOnOffFanPartLoadRatio > 0.0 ) {
-				F( 1 ) = F( 1 ) / LoopOnOffFanPartLoadRatio;
+				F[ 0 ] = F[ 0 ] / LoopOnOffFanPartLoadRatio;
 			}
 			return;
 		} else {
@@ -3474,13 +3515,13 @@ Label90: ;
 				if ( PDROP >= 0.0 ) {
 					RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 				} else {
 					RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 				}
-				F( 1 ) = -DF( 1 ) * PDROP;
+				F[ 0 ] = -DF[ 0 ] * PDROP;
 			} else {
 				// Standard calculation.
 				if ( PDROP >= 0.0 ) {
@@ -3512,11 +3553,11 @@ Label90: ;
 				}
 				// Select laminar or turbulent flow.
 				if ( std::abs( FL ) <= std::abs( FT ) ) {
-					F( 1 ) = FL;
-					DF( 1 ) = CDM;
+					F[ 0 ] = FL;
+					DF[ 0 ] = CDM;
 				} else {
-					F( 1 ) = FT;
-					DF( 1 ) = FT * expn / PDROP;
+					F[ 0 ] = FT;
+					DF[ 0 ] = FT * expn / PDROP;
 				}
 			}
 		}
@@ -3531,8 +3572,8 @@ Label90: ;
 		int const EP_UNUSED( i ), // Linkage number
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -3543,10 +3584,6 @@ Label90: ;
 		// Using/Aliasing
 		using DataLoopNode::Node;
 		using DataHVACGlobals::VerySmallMassFlow;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -3583,8 +3620,8 @@ Label90: ;
 		if ( Node( OutletNode ).MassFlowRate > VerySmallMassFlow && DataAirflowNetwork::PressureSetFlag == DataAirflowNetwork::PressureCtrlRelief ) {
 			// Treat the component as an exhaust fan
 			NF = 1;
-			F( 1 ) = DataAirflowNetwork::ReliefMassFlowRate;
-			DF( 1 ) = 0.0;
+			F[ 0 ] = DataAirflowNetwork::ReliefMassFlowRate;
+			DF[ 0 ] = 0.0;
 			return;
 		} else {
 			// Treat the component as a surface crack
@@ -3608,13 +3645,13 @@ Label90: ;
 				if ( PDROP >= 0.0 ) {
 					RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 				} else {
 					RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 					Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-					DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+					DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 				}
-				F( 1 ) = -DF( 1 ) * PDROP;
+				F[ 0 ] = -DF[ 0 ] * PDROP;
 			} else {
 				// Standard calculation.
 				if ( PDROP >= 0.0 ) {
@@ -3646,11 +3683,11 @@ Label90: ;
 				}
 				// Select laminar or turbulent flow.
 				if ( std::abs( FL ) <= std::abs( FT ) ) {
-					F( 1 ) = FL;
-					DF( 1 ) = CDM;
+					F[ 0 ] = FL;
+					DF[ 0 ] = CDM;
 				} else {
-					F( 1 ) = FT;
-					DF( 1 ) = FT * expn / PDROP;
+					F[ 0 ] = FT;
+					DF[ 0 ] = FT * expn / PDROP;
 				}
 			}
 		}
@@ -3665,8 +3702,8 @@ Label90: ;
 		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
 		int const n, // Node 1 number
 		int const M, // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -3690,10 +3727,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		// na
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -3739,13 +3772,13 @@ Label90: ;
 			if ( PDROP >= 0.0 ) {
 				RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 				Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
 			} else {
 				RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
 				Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF( 1 ) = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
+				DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
 			}
-			F( 1 ) = -DF( 1 ) * PDROP;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
 			if ( PDROP >= 0.0 ) {
@@ -3778,11 +3811,11 @@ Label90: ;
 			// Select laminar or turbulent flow.
 			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " generic crack: " << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
-				F( 1 ) = FL;
-				DF( 1 ) = CDM;
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
 			} else {
-				F( 1 ) = FT;
-				DF( 1 ) = FT * expn / PDROP;
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * expn / PDROP;
 			}
 		}
 	}
@@ -4247,8 +4280,8 @@ Label90: ;
 		int const IL, // Linkage number
 		int const EP_UNUSED( n ), // Node 1 number
 		int const EP_UNUSED( M ), // Node 2 number
-		Array1A< Real64 > F, // Airflow through the component [kg/s]
-		Array1A< Real64 > DF, // Partial derivative:  DF/DP
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
 	)
 	{
@@ -4297,10 +4330,6 @@ Label90: ;
 
 		// USE STATEMENTS:
 		using DataGlobals::PiOvr2;
-
-		// Argument array dimensioning
-		F.dim( 2 );
-		DF.dim( 2 );
 
 		// Locals
 		// SUBROUTINE ARGUMENT DEFINITIONS:
@@ -4690,13 +4719,13 @@ Label90: ;
 		}
 
 		// Output mass flow rates and associated derivatives
-		F( 1 ) = fma12 - fma21;
-		DF( 1 ) = dp1fma12 - dp1fma21;
-		F( 2 ) = 0.0;
+		F[ 0 ] = fma12 - fma21;
+		DF[ 0 ] = dp1fma12 - dp1fma21;
+		F[ 1 ] = 0.0;
 		if ( fma12 != 0.0 && fma21 != 0.0 ) {
-			F( 2 ) = fma21;
+			F[ 1 ] = fma21;
 		}
-		DF( 2 ) = 0.0;
+		DF[ 1 ] = 0.0;
 
 	}
 
@@ -4809,7 +4838,7 @@ Label90: ;
 			hghtsF( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ] + Interval * ( n - 0.5 );
 			hghtsT( n + 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ] + Interval * ( n - 0.5 );
 		}
-		hghtsF( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ];
+		hghtsF[ 0 ] = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ];
 		hghtsT( 1 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ];
 		hghtsF( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 0 ] + ActLh * OwnHeightFactor;
 		hghtsT( NrInt + 2 ) = DataAirflowNetwork::AirflowNetworkLinkageData( il ).nodeHeights[ 1 ] + ActLh * OwnHeightFactor;
