@@ -518,7 +518,7 @@ namespace AirflowNetworkSolver {
 				WZ( n ) = DataEnvironment::OutHumRat;
 			}
 			SQRTDZ( n ) = std::sqrt( RHOZ( n ) );
-			VISCZ( n ) = 1.71432e-5 + 4.828e-8 * TZ( n );
+			VISCZ( n ) = Psychrometrics::airDynamicVisc( TZ( n ) );
 			if ( LIST >= 2 ) gio::write( Unit21, Format_903 ) << "D,V:" << n << RHOZ( n ) << VISCZ( n );
 		}
 		// Compute stack pressures.
@@ -1141,7 +1141,7 @@ namespace AirflowNetworkSolver {
 		// Crack standard condition: T=20C, p=101325 Pa and 0 g/kg
 		CompNum = DataAirflowNetwork::AirflowNetworkCompData( j ).TypeNum;
 		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( 101325.0, 20.0, 0.0 );
-		VisczNorm = 1.71432e-5 + 4.828e-8 * 20.0;
+		VisczNorm = Psychrometrics::airDynamicVisc( 20.0 );
 		expn = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowExpo;
 		coef = DataAirflowNetwork::DisSysCompLeakData( CompNum ).FlowCoef;
 
@@ -1198,113 +1198,6 @@ namespace AirflowNetworkSolver {
 		}
 	}
 
-	int afeplr(
-		Real64 coef, // Flow coefficient
-		Real64 const expn, // Flow exponent
-		int const LFLAG, // Initialization flag.If = 1, use laminar relationship
-		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
-		int const i, // Linkage number
-		int const id0, // Node 1 number
-		int const id1, // Node 2 number
-		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
-		std::array< Real64, 2 > &DF // Partial derivative:  DF/DP
-	)
-	{
-		// SUBROUTINE INFORMATION:
-		//       AUTHOR         George Walton
-		//       DATE WRITTEN   Extracted from AIRNET
-		//       MODIFIED       Lixing Gu, 2/1/04
-		//                      Revised the subroutine to meet E+ needs
-		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw 6/6/17
-		//       RE-ENGINEERED  na
-
-		// PURPOSE OF THIS SUBROUTINE:
-		// This subroutine solves airflow for a power law resistance airflow component
-
-		// METHODOLOGY EMPLOYED:
-		// na
-
-		// REFERENCES:
-		// na
-
-		// USE STATEMENTS:
-		// na
-
-		// Locals
-		// SUBROUTINE ARGUMENT DEFINITIONS:
-
-		// SUBROUTINE PARAMETER DEFINITIONS:
-		// na
-
-		// INTERFACE BLOCK SPECIFICATIONS
-		// na
-
-		// DERIVED TYPE DEFINITIONS
-		// na
-
-		// SUBROUTINE LOCAL VARIABLE DECLARATIONS:
-		Real64 CDM;
-		Real64 FL;
-		Real64 FT;
-		// Crack standard condition: T=20C, p=101325 Pa and 0 g/kg
-		static Real64 RhozNorm( Psychrometrics::PsyRhoAirFnPbTdbW( 101325.0, 20.0, 0.0 ) );
-		static Real64 VisczNorm( 1.71432e-5 + 4.828e-8 * 20.0 ); // Really should use a function here!
-		Real64 Ctl;
-
-		if (PDROP >= 0.0) {
-			coef /= SQRTDZ( id0 );
-		} else {
-			coef /= SQRTDZ( id1 );
-		}
-
-		if (LFLAG == 1) {
-			// Initialization by linear relation.
-			if (PDROP >= 0.0) {
-				Ctl = std::pow( RhozNorm / RHOZ( id0 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id0 ), 2.0 * expn - 1.0 );
-				DF[ 0 ] = coef * RHOZ( id0 ) / VISCZ( id0 ) * Ctl;
-			} else {
-				Ctl = std::pow( RhozNorm / RHOZ( id1 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id1 ), 2.0 * expn - 1.0 );
-				DF[ 0 ] = coef * RHOZ( id1 ) / VISCZ( id1 ) * Ctl;
-			}
-			F[ 0 ] = -DF[ 0 ] * PDROP;
-		} else {
-			// Standard calculation.
-			if (PDROP >= 0.0) {
-				// Flow in positive direction for laminar flow.
-				Ctl = std::pow( RhozNorm / RHOZ( id0 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id0 ), 2.0 * expn - 1.0 );
-				CDM = coef * RHOZ( id0 ) / VISCZ( id0 ) * Ctl;
-				FL = CDM * PDROP;
-				// Flow in positive direction for turbulent flow.
-				if (expn == 0.5) {
-					FT = coef * SQRTDZ( id0 ) * std::sqrt( PDROP );
-				} else {
-					FT = coef * SQRTDZ( id0 ) * std::pow( PDROP, expn );
-				}
-			} else {
-				// Flow in negative direction for laminar flow
-				Ctl = std::pow( RhozNorm / RHOZ( id1 ), expn - 1.0 ) * std::pow( VisczNorm / VISCZ( id1 ), 2.0 * expn - 1.0 );
-				CDM = coef * RHOZ( id1 ) / VISCZ( id1 ) * Ctl;
-				FL = CDM * PDROP;
-				// Flow in negative direction for turbulent flow
-				if (expn == 0.5) {
-					FT = -coef * SQRTDZ( id1 ) * std::sqrt( -PDROP );
-				} else {
-					FT = -coef * SQRTDZ( id1 ) * std::pow( -PDROP, expn );
-				}
-			}
-			// Select laminar or turbulent flow.
-			//if (LIST >= 4) gio::write( Unit21, Format_901 ) << " plr: " << i << PDROP << FL << FT;
-			if (std::abs( FL ) <= std::abs( FT )) {
-				F[ 0 ] = FL;
-				DF[ 0 ] = CDM;
-			} else {
-				F[ 0 ] = FT;
-				DF[ 0 ] = FT * expn / PDROP;
-			}
-		}
-		return 1;
-	}
-
 	void
 	AFESCR(
 		int const j, // Component number
@@ -1323,7 +1216,7 @@ namespace AirflowNetworkSolver {
 		//       DATE WRITTEN   Extracted from AIRNET
 		//       MODIFIED       Lixing Gu, 2/1/04
 		//                      Revised the subroutine to meet E+ needs
-		//       MODIFIED       Lixing Gu, 6/8/05
+		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw, 6/12/2017
 		//       RE-ENGINEERED  na
 
 		// PURPOSE OF THIS SUBROUTINE:
@@ -1390,7 +1283,7 @@ namespace AirflowNetworkSolver {
 		CompNum = DataAirflowNetwork::AirflowNetworkCompData( j ).TypeNum;
 		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardP,
 			DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT, DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardW );
-		VisczNorm = 1.71432e-5 + 4.828e-8 * DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT;
+		VisczNorm = Psychrometrics::airDynamicVisc( DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT );
 
 		expn = DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).FlowExpo;
 		VisAve = 0.5 * ( VISCZ( n1 ) + VISCZ( n2 ) );
@@ -1409,7 +1302,7 @@ namespace AirflowNetworkSolver {
 			// Standard calculation.
 			// Laminar flow.
 			RhoCor = ( tz + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
-			Ctl = std::pow( RhozNorm / dz / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
+			Ctl = std::pow( RhozNorm / ( dz * RhoCor ), expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
 			CDM = coef * dz / viscz * Ctl;
 			FL = CDM * PDROP;
 			// Turbulent flow.
@@ -2928,7 +2821,7 @@ Label90: ;
 			// Crack standard condition from given inputs
 			Corr = DataAirflowNetwork::MultizoneSurfaceData( i ).Factor;
 			RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).StandardP, DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).StandardT, DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).StandardW );
-			VisczNorm = 1.71432e-5 + 4.828e-8 * DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).StandardT;
+			VisczNorm = Psychrometrics::airDynamicVisc( DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).StandardT );
 
 			expn = DataAirflowNetwork::MultizoneCompExhaustFanData( CompNum ).FlowExpo;
 			VisAve = ( VISCZ( n ) + VISCZ( M ) ) / 2.0;
@@ -3382,7 +3275,7 @@ Label90: ;
 			// Crack standard condition from given inputs
 			Corr = 1.0;
 			RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).StandardP, DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).StandardT, DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).StandardW );
-			VisczNorm = 1.71432e-5 + 4.828e-8 * DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).StandardT;
+			VisczNorm = Psychrometrics::airDynamicVisc( DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).StandardT );
 
 			expn = DataAirflowNetwork::DisSysCompOutdoorAirData( CompNum ).FlowExpo;
 			VisAve = ( VISCZ( n ) + VISCZ( M ) ) / 2.0;
@@ -3512,7 +3405,7 @@ Label90: ;
 			// Crack standard condition from given inputs
 			Corr = 1.0;
 			RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).StandardP, DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).StandardT, DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).StandardW );
-			VisczNorm = 1.71432e-5 + 4.828e-8 * DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).StandardT;
+			VisczNorm = Psychrometrics::airDynamicVisc( DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).StandardT );
 
 			expn = DataAirflowNetwork::DisSysCompReliefAirData( CompNum ).FlowExpo;
 			VisAve = ( VISCZ( n ) + VISCZ( M ) ) / 2.0;
@@ -3641,7 +3534,7 @@ Label90: ;
 		// FLOW:
 		// Calculate normal density and viscocity at Crack standard condition: T=20C, p=101325 Pa and 0 g/kg
 		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( 101325.0, 20.0, 0.0 );
-		VisczNorm = 1.71432e-5 + 4.828e-8 * 20.0;
+		VisczNorm = Psychrometrics::airDynamicVisc( 20.0 );
 		VisAve = ( VISCZ( n ) + VISCZ( M ) ) / 2.0;
 		Tave = ( TZ( n ) + TZ( M ) ) / 2.0;
 		if ( PDROP >= 0.0 ) {
