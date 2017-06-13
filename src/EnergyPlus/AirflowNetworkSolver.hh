@@ -526,6 +526,8 @@ namespace AirflowNetworkSolver {
 		int numOfLinks{ 0 };
 		int numOfNodes{ 0 };
 
+		std::vector< Eigen::Triplet<Real64> > triplets;
+
 		Eigen::VectorXd afectl;
 		Eigen::VectorXd aflow2;
 		Eigen::VectorXd aflow;
@@ -544,6 +546,8 @@ namespace AirflowNetworkSolver {
 		Eigen::VectorXd au;
 		Eigen::VectorXd sumf;
 	};
+
+	extern Solver AirflowNetworkSolver;
 
 	//*****************************************************************************************
 

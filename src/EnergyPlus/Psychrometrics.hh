@@ -1308,6 +1308,146 @@ namespace Psychrometrics {
 		return 1000.1207 + 8.3215874e-04 * TB - 4.929976e-03 * pow_2( TB ) + 8.4791863e-06 * pow_3( TB );
 	}
 
+	inline
+	Real64
+	airThermConductivity(
+		Real64 T // Temperature in Celsius
+	)
+	{
+		// FUNCTION INFORMATION:
+		//       AUTHOR         Matt Mitchell
+		//       DATE WRITTEN   Feb. 2017
+
+		// PURPOSE OF THIS FUNCTION:
+		// Dry air thermal conductivity {W/m-K}, Correlated over the range -20C to 70C
+
+		// REFERENCE:
+		// Cengel & Ghajar, Heat and Mass Transfer. 5th ed.
+
+		Real64 const LowerLimit = -20;
+		Real64 const UpperLimit = 70;
+
+		Real64 const a = 0.02364;
+		Real64 const b = 0.0000754772569209165;
+		Real64 const c = -2.40977632412045e-8;
+
+		if ( T < LowerLimit ) {
+			ShowWarningMessage( "Air temperature out of limits for conductivity calculation");
+			T = LowerLimit;
+		} else if ( T > UpperLimit ) {
+			ShowWarningMessage( "Air temperature out of limits for conductivity calculation");
+			T = UpperLimit;
+		}
+
+		return a + b * T + c * pow_2( T );
+	}
+
+	inline
+	Real64
+	airDynamicVisc(
+		Real64 T  // Temperature in Celsius
+	)
+	{
+		// FUNCTION INFORMATION:
+		//       AUTHOR         Matt Mitchell
+		//       DATE WRITTEN   Feb. 2017
+
+		// PURPOSE OF THIS FUNCTION:
+		// Compute air dynamic visosity
+
+		return 1.71432e-5 + 4.828e-8 * T;
+	}
+
+	inline
+	Real64
+	airKinematicVisc(
+		Real64 T, // Temperature in Celsius
+		Real64 W, // Humidity ratio
+		Real64 P // Barometric pressure
+	)
+	{
+		// FUNCTION INFORMATION:
+		//       AUTHOR         Matt Mitchell
+		//       DATE WRITTEN   Feb. 2017
+
+		// PURPOSE OF THIS FUNCTION:
+		// Compute air kinematic viscosity {m2/s}, Correlated over the range -20C to 70C
+
+		// REFERENCE:
+		// Cengel & Ghajar, Heat and Mass Transfer. 5th ed.
+
+		Real64 const LowerLimit = -20;
+		Real64 const UpperLimit = 70;
+
+		if ( T < LowerLimit ) {
+			T = LowerLimit;
+		} else if ( T > UpperLimit ) {
+			T = UpperLimit;
+		}
+
+		return airDynamicVisc( T ) / PsyRhoAirFnPbTdbW( P, T, W );
+	}
+
+	inline
+	Real64
+	airThermalDiffusivity(
+		Real64 T, // Temperature in Celsius
+		Real64 W, // Humidity ratio
+		Real64 P // Barometric pressure
+	)
+	{
+		// FUNCTION INFORMATION:
+		//       AUTHOR         Matt Mitchell
+		//       DATE WRITTEN   Feb. 2017
+
+		// PURPOSE OF THIS FUNCTION:
+		// Compute dry air thermal diffusivity {-}, Correlated over the range -20C to 70C
+
+		// REFERENCE:
+		// Cengel & Ghajar, Heat and Mass Transfer. 5th ed.
+
+		Real64 const LowerLimit = -20;
+		Real64 const UpperLimit = 70;
+
+		if ( T < LowerLimit ) {
+			T = LowerLimit;
+		} else if ( T > UpperLimit ) {
+			T = UpperLimit;
+		}
+
+		return airThermConductivity( T ) / ( PsyCpAirFnWTdb( W, T ) * PsyRhoAirFnPbTdbW( P, T, W ) );
+	}
+
+	inline
+	Real64
+	airPrandtl(
+		Real64 T, // Temperature in Celsius
+		Real64 W, // Humidity ratio
+		Real64 P // Barometric pressure
+	)
+	{
+		// FUNCTION INFORMATION:
+		//       AUTHOR         Matt Mitchell
+		//       DATE WRITTEN   Feb. 2017
+
+		// PURPOSE OF THIS FUNCTION:
+		// Compute dry air Prandtl number {-}, Correlated over the range -20C to 70C
+
+		// REFERENCE:
+		// Cengel & Ghajar, Heat and Mass Transfer. 5th ed.
+
+		Real64 const LowerLimit = -20;
+		Real64 const UpperLimit = 70;
+
+		if ( T < LowerLimit ) {
+			T = LowerLimit;
+		} else if ( T > UpperLimit ) {
+			T = UpperLimit;
+		}
+
+		return airKinematicVisc( T, W, P ) / airThermalDiffusivity( T, W, P );
+	}
+
 } // Psychrometrics
 
 } // EnergyPlus

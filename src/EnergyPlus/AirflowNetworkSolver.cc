@@ -148,6 +148,9 @@ namespace AirflowNetworkSolver {
 	Array1D< Real64 > RhoProfT; // Density profile in TO zone [kg/m3]
 	Array2D< Real64 > DpL; // Array of stack pressures in link
 
+	// Stopgap global solver object
+	Solver AirflowNetworkSolver;
+
 	// Functions
 
 	void
@@ -877,10 +880,8 @@ namespace AirflowNetworkSolver {
 #endif
 		Array1D< Real64 > X( 4 );
 		Real64 DP;
-		//Array1D< Real64 > F( 2 );
-		//Array1D< Real64 > DF( 2 );
-    std::array< Real64, 2> F{ 0.0, 0.0 };
-    std::array< Real64, 2> DF{ 0.0, 0.0 };
+		std::array< Real64, 2> F{ 0.0, 0.0 };
+		std::array< Real64, 2> DF{ 0.0, 0.0 };
 
 		// Formats
 		static gio::Fmt Format_901( "(A5,3I3,4E16.7)" );
@@ -965,6 +966,9 @@ namespace AirflowNetworkSolver {
 				++FLAG;
 				X( 1 ) = DF[ 0 ];
 				X( 2 ) = -DF[ 0 ];
+				// Add to the sparse matrix
+				AirflowNetworkSolver.triplets.push_back( Eigen::Triplet<Real64>( n, M,  DF[ 0 ] ) );
+				AirflowNetworkSolver.triplets.push_back( Eigen::Triplet<Real64>( M, n, -DF[ 0 ] ) );
 				SUMF( n ) += F[ 0 ];
 				SUMAF( n ) += std::abs( F[ 0 ] );
 			}
@@ -975,26 +979,31 @@ namespace AirflowNetworkSolver {
 				SUMF( M ) -= F[ 0 ];
 				SUMAF( M ) += std::abs( F[ 0 ] );
 			}
-			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
-			if ( NF == 1 ) continue;
-			AFLOW2( i ) = F[ 1 ];
-			if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRj:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F[ 1 ] << DF[ 1 ];
-			FLAG = 1;
-			if ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeTypeNum == 0 ) {
-				++FLAG;
-				X( 1 ) = DF[ 1 ];
-				X( 2 ) = -DF[ 1 ];
-				SUMF( n ) += F[ 1 ];
-				SUMAF( n ) += std::abs( F[ 1 ] );
+			if ( FLAG != 1 ) {
+				FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 			}
-			if ( DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeTypeNum == 0 ) {
-				FLAG += 2;
-				X( 4 ) = DF[ 1 ];
-				X( 3 ) = -DF[ 1 ];
-				SUMF( M ) -= F[ 1 ];
-				SUMAF( M ) += std::abs( F[ 1 ] );
+			if (NF == 2) {
+				AFLOW2( i ) = F[ 1 ];
+				if ( LIST >= 3 ) gio::write( Unit21, Format_901 ) << " NRj:" << i << n << M << DataAirflowNetwork::AirflowNetworkLinkSimu( i ).DP << F[ 1 ] << DF[ 1 ];
+				FLAG = 1;
+				if ( DataAirflowNetwork::AirflowNetworkNodeData( n ).NodeTypeNum == 0 ) {
+					++FLAG;
+					X( 1 ) = DF[ 1 ];
+					X( 2 ) = -DF[ 1 ];
+					SUMF( n ) += F[ 1 ];
+					SUMAF( n ) += std::abs( F[ 1 ] );
+				}
+				if ( DataAirflowNetwork::AirflowNetworkNodeData( M ).NodeTypeNum == 0 ) {
+					FLAG += 2;
+					X( 4 ) = DF[ 1 ];
+					X( 3 ) = -DF[ 1 ];
+					SUMF( M ) -= F[ 1 ];
+					SUMAF( M ) += std::abs( F[ 1 ] );
+				}
+				if ( FLAG != 1 ) {
+					FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
+				}
 			}
-			if ( FLAG != 1 ) FILSKY( X, DataAirflowNetwork::AirflowNetworkLinkageData( i ).nodeNums, IK, AU, AD, FLAG );
 		}
 
 #ifdef SKYLINE_MATRIX_REMOVE_ZERO_COLUMNS
@@ -1302,8 +1311,8 @@ namespace AirflowNetworkSolver {
 		int const LFLAG, // Initialization flag.If = 1, use laminar relationship
 		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
 		int const i, // Linkage number
-		int const n, // Node 1 number
-		int const M, // Node 2 number
+		int const n1, // Node 1 number
+		int const n2, // Node 2 number
 		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
 		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
 		int & NF // Number of flows, either 1 or 2
@@ -1356,8 +1365,20 @@ namespace AirflowNetworkSolver {
 		Real64 RhoCor;
 		int CompNum;
 
-		// Formats
-		static gio::Fmt Format_901( "(A5,I3,6X,4E16.7)" );
+		Real64 sign( 1.0 );
+		Real64 dz( RHOZ( n1 ) );
+		Real64 sqrtdz( SQRTDZ( n1 ) );
+		Real64 viscz( VISCZ( n1 ) );
+		Real64 tz( TZ( n1 ) );
+		Real64 absdeltap( PDROP );
+		if ( PDROP < 0.0 ) {
+			sign = -1.0;
+			dz = RHOZ( n2 );
+			sqrtdz = SQRTDZ( n2 );
+			viscz = VISCZ( n2 );
+			tz = TZ( n2 );
+			absdeltap = -PDROP;
+		}
 
 		// FLOW:
 		// Crack standard condition from given inputs
@@ -1367,180 +1388,43 @@ namespace AirflowNetworkSolver {
 			Corr = DataAirflowNetwork::MultizoneSurfaceData( i ).Factor;
 		}
 		CompNum = DataAirflowNetwork::AirflowNetworkCompData( j ).TypeNum;
-		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardP, DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT, DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardW );
+		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardP,
+			DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT, DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardW );
 		VisczNorm = 1.71432e-5 + 4.828e-8 * DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).StandardT;
 
 		expn = DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).FlowExpo;
-		VisAve = ( VISCZ( n ) + VISCZ( M ) ) / 2.0;
-		Tave = ( TZ( n ) + TZ( M ) ) / 2.0;
-		if ( PDROP >= 0.0 ) {
-			coef = DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).FlowCoef / SQRTDZ( n ) * Corr;
-		} else {
-			coef = DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).FlowCoef / SQRTDZ( M ) * Corr;
-		}
+		VisAve = 0.5 * ( VISCZ( n1 ) + VISCZ( n2 ) );
+		Tave = 0.5 * ( TZ( n1 ) + TZ( n2 ) );
+
+		coef = DataAirflowNetwork::MultizoneSurfaceCrackData( CompNum ).FlowCoef * Corr;
 
 		NF = 1;
 		if ( LFLAG == 1 ) {
 			// Initialization by linear relation.
-			if ( PDROP >= 0.0 ) {
-				RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
-				Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF[ 0 ] = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
-			} else {
-				RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
-				Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				DF[ 0 ] = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
-			}
+			RhoCor = ( tz + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
+			Ctl = std::pow( RhozNorm / dz / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
+			DF[ 0 ] = coef * sqrtdz / viscz * Ctl;
 			F[ 0 ] = -DF[ 0 ] * PDROP;
 		} else {
 			// Standard calculation.
-			if ( PDROP >= 0.0 ) {
-				// Flow in positive direction.
-				// Laminar flow.
-				RhoCor = ( TZ( n ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
-				Ctl = std::pow( RhozNorm / RHOZ( n ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				CDM = coef * RHOZ( n ) / VISCZ( n ) * Ctl;
-				FL = CDM * PDROP;
-				// Turbulent flow.
-				if ( expn == 0.5 ) {
-					FT = coef * SQRTDZ( n ) * std::sqrt( PDROP ) * Ctl;
-				} else {
-					FT = coef * SQRTDZ( n ) * std::pow( PDROP, expn ) * Ctl;
-				}
+			// Laminar flow.
+			RhoCor = ( tz + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
+			Ctl = std::pow( RhozNorm / dz / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
+			CDM = coef * dz / viscz * Ctl;
+			FL = CDM * PDROP;
+			// Turbulent flow.
+			if ( expn == 0.5 ) {
+				FT = sign * coef * std::sqrt( absdeltap ) * Ctl;
 			} else {
-				// Flow in negative direction.
-				// Laminar flow.
-				RhoCor = ( TZ( M ) + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
-				Ctl = std::pow( RhozNorm / RHOZ( M ) / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
-				CDM = coef * RHOZ( M ) / VISCZ( M ) * Ctl;
-				FL = CDM * PDROP;
-				// Turbulent flow.
-				if ( expn == 0.5 ) {
-					FT = -coef * SQRTDZ( M ) * std::sqrt( -PDROP ) * Ctl;
-				} else {
-					FT = -coef * SQRTDZ( M ) * std::pow( -PDROP, expn ) * Ctl;
-				}
+				FT = sign * coef * std::pow( absdeltap, expn ) * Ctl;
 			}
 			// Select laminar or turbulent flow.
-			if ( LIST >= 4 ) gio::write( Unit21, Format_901 ) << " scr: " << i << PDROP << FL << FT;
 			if ( std::abs( FL ) <= std::abs( FT ) ) {
 				F[ 0 ] = FL;
 				DF[ 0 ] = CDM;
 			} else {
 				F[ 0 ] = FT;
 				DF[ 0 ] = FT * expn / PDROP;
-			}
-		}
-	}
-
-	void Solver::afescr( Real64 coef, // Flow coefficient
-		Real64 const expn, // Flow exponent
-		Real64 const refDensity, // Reference density
-		Real64 const refViscosity, // Reference viscosity
-		int const LFLAG, // Initialization flag. If = 1, use laminar relationship
-		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
-		int const id0, // Node 1 number
-		int const id1, // Node 2 number
-		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
-		std::array< Real64, 2 > &DF // Partial derivative:  DF/DP
-	)
-	{
-		// SUBROUTINE INFORMATION:
-		//       AUTHOR         George Walton
-		//       DATE WRITTEN   Extracted from AIRNET
-		//       MODIFIED       Lixing Gu, 2/1/04
-		//                      Revised the subroutine to meet E+ needs
-		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw, 6/6/17
-		//       RE-ENGINEERED  na
-
-		// PURPOSE OF THIS SUBROUTINE:
-		// This subroutine solves airflow for a surface crack component
-
-		// METHODOLOGY EMPLOYED:
-		// na
-
-		// REFERENCES:
-		// na
-
-		// USE STATEMENTS:
-		// na
-
-		// Locals
-		// SUBROUTINE ARGUMENT DEFINITIONS:
-
-		// SUBROUTINE PARAMETER DEFINITIONS:
-		// na
-
-		// INTERFACE BLOCK SPECIFICATIONS
-		// na
-
-		// DERIVED TYPE DEFINITIONS
-		// na
-
-		// SUBROUTINE LOCAL VARIABLE DECLARATIONS:
-		Real64 CDM;
-		Real64 FL;
-		Real64 FT;
-		Real64 Ctl;
-		Real64 VisAve;
-		Real64 Tave;
-		Real64 RhoCor;
-
-		VisAve = (viscz( id0 ) + viscz( id1 )) / 2.0;
-		Tave = (tz( id0 ) + tz( id1 )) / 2.0;
-		if (PDROP >= 0.0) {
-			coef /= sqrtdz( id0 );
-		} else {
-			coef /= sqrtdz( id1 );
-		}
-
-		if (LFLAG == 1) {
-			// Initialization by linear relation.
-			if (PDROP >= 0.0) {
-				RhoCor = (TZ( id0 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
-				Ctl = std::pow( refDensity / dz( id0 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
-				DF[0] = coef * dz( id0 ) / viscz( id0 ) * Ctl;
-			} else {
-				RhoCor = (TZ( id1 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
-				Ctl = std::pow( refDensity / dz( id1 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
-				DF[0] = coef * dz( id1 ) / viscz( id1 ) * Ctl;
-			}
-			F[0] = -DF[0] * PDROP;
-		} else {
-			// Standard calculation.
-			if (PDROP >= 0.0) {
-				// Flow in positive direction.
-				// Laminar flow.
-				RhoCor = (tz( id0 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
-				Ctl = std::pow( refDensity / dz( id0 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
-				CDM = coef * dz( id0 ) / viscz( id0 ) * Ctl;
-				FL = CDM * PDROP;
-				// Turbulent flow.
-				if (expn == 0.5) {
-					FT = coef * sqrtdz( id0 ) * std::sqrt( PDROP ) * Ctl;
-				} else {
-					FT = coef * sqrtdz( id0 ) * std::pow( PDROP, expn ) * Ctl;
-				}
-			} else {
-				// Flow in negative direction for laminar flow
-				RhoCor = (tz( id1 ) + DataGlobals::KelvinConv) / (Tave + DataGlobals::KelvinConv);
-				Ctl = std::pow( refDensity / dz( id1 ) / RhoCor, expn - 1.0 ) * std::pow( refViscosity / VisAve, 2.0 * expn - 1.0 );
-				CDM = coef * dz( id1 ) / viscz( id1 ) * Ctl;
-				FL = CDM * PDROP;
-				// Flow in negative direction for turbulent flow
-				if (expn == 0.5) {
-					FT = -coef * sqrtdz( id1 ) * std::sqrt( -PDROP ) * Ctl;
-				} else {
-					FT = -coef * sqrtdz( id1 ) * std::pow( -PDROP, expn ) * Ctl;
-				}
-			}
-			// Select laminar or turbulent flow.
-			if (std::abs( FL ) <= std::abs( FT )) {
-				F[0] = FL;
-				DF[0] = CDM;
-			} else {
-				F[0] = FT;
-				DF[0] = FT * expn / PDROP;
 			}
 		}
 	}
