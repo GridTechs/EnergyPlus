@@ -47,6 +47,8 @@
 // EnergyPlus Headers
 #include <DataAirflowNetwork.hh>
 #include <DataPrecisionGlobals.hh>
+#include "Psychrometrics.hh"
+#include "AirflowNetworkSolver.hh"
 
 namespace EnergyPlus {
 
@@ -201,7 +203,7 @@ namespace DataAirflowNetwork {
 	Array1D< MultizoneCompSimpleOpeningProp > MultizoneCompSimpleOpeningData;
 	Array1D< MultizoneCompHorOpeningProp > MultizoneCompHorOpeningData;
 	Array1D< MultizoneSurfaceCrackStdCndns > MultizoneSurfaceStdConditionsCrackData;
-	Array1D< MultizoneSurfaceCrackProp > MultizoneSurfaceCrackData;
+	Array1D< MultizoneSurfaceCrack > MultizoneSurfaceCrackData;
 	Array1D< MultizoneSurfaceELAProp > MultizoneSurfaceELAData;
 	Array1D< MultizoneExternalNodeProp > MultizoneExternalNodeData;
 	Array1D< MultizoneCPArrayProp > MultizoneCPArrayData;
@@ -230,6 +232,121 @@ namespace DataAirflowNetwork {
 	Array1D< DisSysCompAirflowProp > DisSysCompOutdoorAirData;
 	Array1D< DisSysCompAirflowProp > DisSysCompReliefAirData;
 	Array1D< AirflowNetworkLinkageViewFactorProp > AirflowNetworkLinkageViewFactorData;
+
+	int
+	MultizoneSurfaceCrack::computeJacobian(
+		bool const LFLAG, // Initialization flag.If true, use laminar relationship
+		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
+		int const n1, // Node 1 number
+		int const n2, // Node 2 number
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
+		Real64 const multiplier // Multiplier
+	)
+	{
+		// SUBROUTINE INFORMATION:
+		//       AUTHOR         George Walton
+		//       DATE WRITTEN   Extracted from AIRNET
+		//       MODIFIED       Lixing Gu, 2/1/04
+		//                      Revised the subroutine to meet E+ needs
+		//       MODIFIED       Lixing Gu, 6/8/05; Jason DeGraw, 6/12/2017
+		//       RE-ENGINEERED  na
+
+		// PURPOSE OF THIS SUBROUTINE:
+		// This subroutine solves airflow for a surface crack component
+
+		// METHODOLOGY EMPLOYED:
+		// na
+
+		// REFERENCES:
+		// na
+
+		// USE STATEMENTS:
+		// na
+
+		// Locals
+		// SUBROUTINE ARGUMENT DEFINITIONS:
+
+		// SUBROUTINE PARAMETER DEFINITIONS:
+		// na
+
+		// INTERFACE BLOCK SPECIFICATIONS
+		// na
+
+		// DERIVED TYPE DEFINITIONS
+		// na
+
+		// SUBROUTINE LOCAL VARIABLE DECLARATIONS:
+		Real64 CDM;
+		Real64 FL;
+		Real64 FT;
+		Real64 RhozNorm;
+		Real64 VisczNorm;
+		Real64 expn;
+		Real64 Ctl;
+		Real64 coef;
+		Real64 VisAve;
+		Real64 Tave;
+		Real64 RhoCor;
+		int CompNum;
+
+		// Handle positive/negative pressure difference
+		Real64 sign( 1.0 );
+		Real64 dz( AirflowNetworkSolver::RHOZ( n1 ) );
+		Real64 sqrtdz( AirflowNetworkSolver::SQRTDZ( n1 ) );
+		Real64 viscz( AirflowNetworkSolver::VISCZ( n1 ) );
+		Real64 tz( AirflowNetworkSolver::TZ( n1 ) );
+		Real64 absdeltap( PDROP );
+		if ( PDROP < 0.0 ) {
+			sign = -1.0;
+			dz = AirflowNetworkSolver::RHOZ( n2 );
+			sqrtdz = AirflowNetworkSolver::SQRTDZ( n2 );
+			viscz = AirflowNetworkSolver::VISCZ( n2 );
+			tz = AirflowNetworkSolver::TZ( n2 );
+			absdeltap = -PDROP;
+		}
+
+		// FLOW:
+		// Crack standard condition from given inputs
+		RhozNorm = Psychrometrics::PsyRhoAirFnPbTdbW( StandardP, StandardT, StandardW );
+		VisczNorm = Psychrometrics::airDynamicVisc( StandardT );
+
+		expn = FlowExpo;
+		VisAve = 0.5 * ( AirflowNetworkSolver::VISCZ( n1 ) + AirflowNetworkSolver::VISCZ( n2 ) );
+		Tave = 0.5 * ( AirflowNetworkSolver::TZ( n1 ) + AirflowNetworkSolver::TZ( n2 ) );
+
+		coef = FlowCoef * multiplier;
+
+		if ( LFLAG ) {
+			// Initialization by linear relation.
+			RhoCor = ( tz + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
+			Ctl = std::pow( RhozNorm / dz / RhoCor, expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
+			DF[ 0 ] = coef * sqrtdz / viscz * Ctl;
+			F[ 0 ] = -DF[ 0 ] * PDROP;
+		} else {
+			// Standard calculation.
+			// Laminar flow.
+			RhoCor = ( tz + DataGlobals::KelvinConv ) / ( Tave + DataGlobals::KelvinConv );
+			Ctl = std::pow( RhozNorm / ( dz * RhoCor ), expn - 1.0 ) * std::pow( VisczNorm / VisAve, 2.0 * expn - 1.0 );
+			CDM = coef * dz / viscz * Ctl;
+			FL = CDM * PDROP;
+			// Turbulent flow.
+			if ( expn == 0.5 ) {
+				FT = sign * coef * std::sqrt( absdeltap ) * Ctl;
+			} else {
+				FT = sign * coef * std::pow( absdeltap, expn ) * Ctl;
+			}
+			// Select laminar or turbulent flow.
+			if ( std::abs( FL ) <= std::abs( FT ) ) {
+				F[ 0 ] = FL;
+				DF[ 0 ] = CDM;
+			} else {
+				F[ 0 ] = FT;
+				DF[ 0 ] = FT * expn / PDROP;
+			}
+		}
+		return 1;
+	}
 
 	void
 	clear_state()

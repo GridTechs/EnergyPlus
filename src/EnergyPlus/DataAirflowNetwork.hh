@@ -569,11 +569,11 @@ namespace DataAirflowNetwork {
 
 	};
 
-	struct MultizoneSurfaceCrackProp // Surface crack component
+	struct MultizoneSurfaceCrack // Surface crack component
 	{
 		// Members
 		std::string Name; // Name of crack component
-		std::string ExternalNodeNames; // Name of external node.Not required for internal surface
+		std::string ExternalNodeNames; // Name of external node. Not required for internal surface
 		Real64 FlowCoef; // Air Mass Flow Coefficient When Window or Door Is Closed [kg/s at 1Pa]
 		Real64 FlowExpo; // Air Mass Flow exponent When Window or Door Is Closed [dimensionless]
 		Real64 StandardT; // Standard temperature for crack data
@@ -581,13 +581,24 @@ namespace DataAirflowNetwork {
 		Real64 StandardW; // Standard humidity ratio for crack data
 
 		// Default Constructor
-		MultizoneSurfaceCrackProp() :
+		MultizoneSurfaceCrack() :
 			FlowCoef( 0.0 ),
 			FlowExpo( 0.0 ),
 			StandardT( 0.0 ),
 			StandardP( 0.0 ),
 			StandardW( 0.0 )
 		{}
+
+	int
+	computeJacobian(
+		bool const LFLAG, // Initialization flag. If true, use laminar relationship
+		Real64 const PDROP, // Total pressure drop across a component (P1 - P2) [Pa]
+		int const n1, // Node 1 number
+		int const n2, // Node 2 number
+		std::array< Real64, 2 > &F, // Airflow through the component [kg/s]
+		std::array< Real64, 2 > &DF, // Partial derivative:  DF/DP
+		Real64 const multiplier = 1 // Multiplier
+	); // Returns number of flows, either 1 or 2
 
 	};
 
@@ -1456,7 +1467,7 @@ namespace DataAirflowNetwork {
 	extern Array1D< MultizoneCompSimpleOpeningProp > MultizoneCompSimpleOpeningData;
 	extern Array1D< MultizoneCompHorOpeningProp > MultizoneCompHorOpeningData;
 	extern Array1D< MultizoneSurfaceCrackStdCndns > MultizoneSurfaceStdConditionsCrackData;
-	extern Array1D< MultizoneSurfaceCrackProp > MultizoneSurfaceCrackData;
+	extern Array1D< MultizoneSurfaceCrack > MultizoneSurfaceCrackData;
 	extern Array1D< MultizoneSurfaceELAProp > MultizoneSurfaceELAData;
 	extern Array1D< MultizoneExternalNodeProp > MultizoneExternalNodeData;
 	extern Array1D< MultizoneCPArrayProp > MultizoneCPArrayData;

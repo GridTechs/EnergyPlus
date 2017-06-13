@@ -181,6 +181,20 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_Crack )
 	EXPECT_EQ( 0.0, F[ 1 ] );
 	EXPECT_EQ( 0.0, DF[ 1 ] );
 
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( false, 100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ(1, NF);
+	EXPECT_NEAR(0.006, F[0], 1.0e-12);
+	EXPECT_NEAR(0.00003, DF[0], 1.0e-12);
+	EXPECT_EQ(0.0, F[1]);
+	EXPECT_EQ(0.0, DF[1]);
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( false, -100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	EXPECT_NEAR( -0.006, F[ 0 ], 1.0e-12 );
+	EXPECT_NEAR( 0.00003, DF[ 0 ], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[ 1 ] );
+	EXPECT_EQ( 0.0, DF[ 1 ] );
+
 	AirflowNetworkSolver::AFESCR( 1, 1, 100.0, 1, 1, 2, F, DF, NF );
 	EXPECT_EQ( 1, NF );
 	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
@@ -189,6 +203,20 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_Crack )
 	EXPECT_EQ( 0.0, DF[ 1 ] );
 
 	AirflowNetworkSolver::AFESCR(1, 1, -100.0, 1, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF);
+	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
+	EXPECT_NEAR( 0.0006*sqrt(density) / viscosity, DF[0], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[1] );
+	EXPECT_EQ( 0.0, DF[1] );
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( true, 100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
+	EXPECT_NEAR( 0.0006*sqrt( density )/viscosity, DF[ 0 ], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[ 1 ] );
+	EXPECT_EQ( 0.0, DF[ 1 ] );
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( true, -100.0, 1, 2, F, DF, NF );
 	EXPECT_EQ( 1, NF);
 	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
 	EXPECT_NEAR( 0.0006*sqrt(density) / viscosity, DF[0], 1.0e-12 );
@@ -226,6 +254,20 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_Crack )
 	EXPECT_EQ( 0.0, F[ 1 ] );
 	EXPECT_EQ( 0.0, DF[ 1 ] );
 
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( false, 100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	EXPECT_NEAR( Ctl*0.006, F[ 0 ], 1.0e-12 );
+	EXPECT_NEAR( Ctl*0.00003, DF[ 0 ], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[ 1 ] );
+	EXPECT_EQ( 0.0, DF[ 1 ] );
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( true, 100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
+	EXPECT_NEAR( Ctl*0.0006*sqrt( density )/viscosity, DF[ 0 ], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[ 1 ] );
+	EXPECT_EQ( 0.0, DF[ 1 ] );
+
 	Ctl = std::pow(RhozNorm * (Tave + DataGlobals::KelvinConv) / (density2 * (tz2 + DataGlobals::KelvinConv)), -0.5)
 		* std::pow(VisczNorm / VisAve, 0.0);
 
@@ -237,6 +279,20 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_Crack )
 	EXPECT_EQ( 0.0, DF[ 1 ] );
 
 	AirflowNetworkSolver::AFESCR( 1, 1, -100.0, 1, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
+	EXPECT_NEAR( Ctl*0.0006*sqrt(density2) / viscosity2, DF[0], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[1] );
+	EXPECT_EQ( 0.0, DF[1] );
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( false, -100.0, 1, 2, F, DF, NF );
+	EXPECT_EQ( 1, NF );
+	EXPECT_NEAR( -Ctl*0.006, F[ 0 ], 1.0e-12 );
+	EXPECT_NEAR( Ctl*0.00003, DF[ 0 ], 1.0e-12 );
+	EXPECT_EQ( 0.0, F[ 1 ] );
+	EXPECT_EQ( 0.0, DF[ 1 ] );
+
+	DataAirflowNetwork::MultizoneSurfaceCrackData( 1 ).computeJacobian( true, -100.0, 1, 2, F, DF, NF );
 	EXPECT_EQ( 1, NF );
 	//EXPECT_NEAR( 0.06*sqrt( density )/viscosity, F[ 0 ], 1.0e-12);
 	EXPECT_NEAR( Ctl*0.0006*sqrt(density2) / viscosity2, DF[0], 1.0e-12 );

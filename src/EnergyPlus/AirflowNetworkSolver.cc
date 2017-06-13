@@ -1258,6 +1258,7 @@ namespace AirflowNetworkSolver {
 		Real64 RhoCor;
 		int CompNum;
 
+		// Handle positive/negative pressure difference
 		Real64 sign( 1.0 );
 		Real64 dz( RHOZ( n1 ) );
 		Real64 sqrtdz( SQRTDZ( n1 ) );
