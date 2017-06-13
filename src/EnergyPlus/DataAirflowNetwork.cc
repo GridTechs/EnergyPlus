@@ -288,7 +288,6 @@ namespace DataAirflowNetwork {
 		Real64 VisAve;
 		Real64 Tave;
 		Real64 RhoCor;
-		int CompNum;
 
 		// Handle positive/negative pressure difference
 		Real64 sign( 1.0 );

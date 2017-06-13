@@ -880,8 +880,8 @@ namespace AirflowNetworkSolver {
 #endif
 		Array1D< Real64 > X( 4 );
 		Real64 DP;
-		std::array< Real64, 2> F{ 0.0, 0.0 };
-		std::array< Real64, 2> DF{ 0.0, 0.0 };
+		std::array< Real64, 2> F{ { 0.0, 0.0 } };
+		std::array< Real64, 2> DF{ { 0.0, 0.0 } };
 
 		// Formats
 		static gio::Fmt Format_901( "(A5,3I3,4E16.7)" );
@@ -934,6 +934,10 @@ namespace AirflowNetworkSolver {
 			} else if ( SELECT_CASE_var == DataAirflowNetwork::CompTypeNum_SOP ) { // Simple opening
 				AFESOP( j, LFLAG, DP, i, n, M, F, DF, NF );
 			} else if ( SELECT_CASE_var == DataAirflowNetwork::CompTypeNum_SCR ) { // Surface crack component
+				Real64 multiplier( 1.0 );
+				if ( i <= NetworkNumOfLinks - DataAirflowNetwork::NumOfLinksIntraZone ) {
+					multiplier = DataAirflowNetwork::MultizoneSurfaceData( i ).Factor;
+				}
 				AFESCR( j, LFLAG, DP, i, n, M, F, DF, NF );
 			} else if ( SELECT_CASE_var == DataAirflowNetwork::CompTypeNum_SEL ) { // Surface effective leakage ratio component
 				AFESEL( j, LFLAG, DP, i, n, M, F, DF, NF );

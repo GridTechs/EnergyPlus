@@ -71,8 +71,8 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_HorizontalOpening )
 	int n;
 	int m;
 	int NF;
-	std::array< Real64, 2 > F{ 0.0, 0.0 };
-	std::array< Real64, 2 > DF{ 0.0, 0.0 };
+	std::array< Real64, 2 > F{ { 0.0, 0.0 } };
+	std::array< Real64, 2 > DF{ { 0.0, 0.0 } };
 
 	n = 1;
 	m = 2;
@@ -123,8 +123,8 @@ TEST_F( EnergyPlusFixture, AirflowNetworkSolverTest_Crack )
 	int n;
 	int m;
 	int NF;
-	std::array< Real64, 2 > F{ 0.0, 0.0 };
-	std::array< Real64, 2 > DF{ 0.0, 0.0 };
+	std::array< Real64, 2 > F{ { 0.0, 0.0 } };
+	std::array< Real64, 2 > DF{ { 0.0, 0.0 } };
 
 	n = 1;
 	m = 2;
